@@ -36,6 +36,7 @@ def power(data, n_bins =None, combine = None, bin_w = None):
     bins = np.arange(0,r_max+bin_w,bin_w) #bin ranges
     
     ind = np.argsort(r.flat)#sorting radii and their corresponding pixels
+    #ind is here so as to not lose track of which pixel corresponds to which radius after sorting
     r_sorted = r.flat[ind]
     pix_sorted = kspace.flat[ind]
     
