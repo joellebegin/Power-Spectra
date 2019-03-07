@@ -17,17 +17,18 @@ def group_pixels(sorted_pix, bin_indices):
     
 "creates grid of pixel positions, the center of the grid, and max radius"
 def grid(data):
+    n = data.shape[0]
     y,x = np.indices(data.shape)
     center = [n//2,n//2]
     r_max = (n-0.5) - center[0]
     
-    return (x,y,center, r_max)
+    return (x,y,center, r_max, n)
 
 def power(data, n_bins =None, combine = None, bin_w = None):
     data = fftshift(data)
     kspace = np.abs(fftshift(fft2(data)))**2
 
-    x,y,center,r_max = grid(kspace)
+    x,y,center,r_max,n = grid(kspace)
     
     r = np.hypot(x - center[0], y - center[1]) #radial distance of each pixel from center
     if bin_w is None: 
