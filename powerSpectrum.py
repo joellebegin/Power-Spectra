@@ -1,6 +1,9 @@
 import numpy as np
 from numpy.fft import fft2, fftshift
 
+'''This function returns the power spectrum of a given n by n grid of pixels'''
+
+
 '''given some bins and their dimensions, combines the first n bins (also returns new dimension array)'''
 def combine_bins(bins, dims, n):
     b = np.concatenate(([sum(bins[:n])], bins[n:]))
