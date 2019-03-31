@@ -1,6 +1,10 @@
 import numpy as np 
 
-'''creates transformation matrix for endomorphism that reflects the rows of a matrix along the middle axis'''
+'''returns a grid of random (complex) gaussian distribution whose 2dfft is real valued only (approximately)'''
+
+
+'''creates transformation matrix for endomorphism that reflects the rows of a matrix along the middle vertical axis
+    n - the number of rows of the matrix to be transformed'''
 def transformation(n):
     matrix = [0]*n
     j = n-1
@@ -22,7 +26,7 @@ def reflect(grid):
     trans_matrix = transformation(grid.shape[1])
     return np.matmul(grid,trans_matrix)
 
-'''reflects an array about right end'''
+'''reflects an array about right end. That is, [a,b,c] --> [c,b,a]'''
 def reflect_row(row):
     reflected = []
     for entry in row[::-1]:
@@ -30,7 +34,8 @@ def reflect_row(row):
         
     return reflected
 
-'''returns an array of random gaussian complex distribution of specified shape'''
+'''returns an array of random gaussian complex distribution of specified shape
+    shape - tuple or int. Returns either a grid or an array'''
 def gaussian_complex(shape):
     return np.random.normal(size =shape) + np.random.normal(size = shape)*1j
 
