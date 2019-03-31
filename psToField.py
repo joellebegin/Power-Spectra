@@ -11,13 +11,15 @@ def radii(n):
 
 def field(ps_function, n = None):
     
-    #arbitrary grid size. When units update comes, this will be different.
+    #arbitrary grid size. 1000 seems to give good resolution without sacrificing speed.
     if n is None:
-        n = 200 
+        n = 1000 
     
-    #complex random gauss grid satisfying Im(fft(randgauss)) = 0
+    #complex random gauss grid satisfying Im(fft(rand_gauss)) ~ 0
     rand_gauss = real(n)
     r = radii(n)
+    
+    #each pixel will be drawn from gaussian distribution of this stdv
     stdv_r = np.sqrt( (n**2)*ps_function(r) )
 
     #scaling random gaussian dist according to given power spectrum
