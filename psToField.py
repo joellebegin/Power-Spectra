@@ -11,11 +11,11 @@ def radii(n):
 
 def field(ps_function, n = None):
     
-    #arbitrary grid size. 1000 seems to give good resolution without sacrificing speed.
+    #arbitrary grid size. 1000 gives good resolution without sacrificing speed.
     if n is None:
         n = 1000 
     
-    #complex random gauss grid satisfying Im(fft(rand_gauss)) ~ 0
+    #complex random gauss grid satisfying Im(fft2(rand_gauss)) ~ 0
     rand_gauss = real(n)
     r = radii(n)
     
