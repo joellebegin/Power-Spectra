@@ -2,6 +2,8 @@ import numpy as np
 from numpy.fft import fft2, fftshift
 
 '''This function returns the power spectrum of a given n by n grid of pixels'''
+'hello'
+
 
 '''given some bins and their dimensions, combines the first n bins (also returns 
 new dimension array)
@@ -13,7 +15,9 @@ def combine_bins(bins, dims, n):
     c = np.concatenate(([sum(dims[:n])],dims[n:]))
     return(b, c)
 
-'''grouping pixels into their respective bins. This is the problematic/slow part 
+
+def group_pixels(sorted_pix, bin_indices):
+    '''grouping pixels into their respective bins. This is the problematic/slow part 
 of the code I think? Gotta be a better way to do it
     sorted_pix - flattened array of the pixels in the grid sorted in order of 
     ascending radial distance from center
@@ -21,7 +25,6 @@ of the code I think? Gotta be a better way to do it
     bin_indices - array where each bin_indices[i] gives the index in sorted_pix 
     of the last pixel going into the ith bin.
 '''
-def group_pixels(sorted_pix, bin_indices):
     grouped_pix = [] 
     for i in range(1, len(bin_indices)):
         grouped_pix.append(sorted_pix[bin_indices[i-1]:bin_indices[i]]  )
