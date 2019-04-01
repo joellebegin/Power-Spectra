@@ -1,9 +1,11 @@
 import numpy as np 
 
-'''returns a grid of random (complex) gaussian distribution whose 2dfft is real valued only (approximately)'''
+'''returns a grid of random (complex) gaussian distribution whose 2dfft is real 
+valued only (approximately)'''
 
 
-'''creates transformation matrix for endomorphism that reflects the rows of a matrix along the middle vertical axis
+'''creates transformation matrix for endomorphism that reflects the rows of a 
+matrix along the middle vertical axis
     n - the number of rows of the matrix to be transformed'''
 def transformation(n):
     matrix = [0]*n
@@ -62,8 +64,8 @@ def final(grid1, grid2, rows):
     
     return np.hstack((side, first))
 
-
-'''returns a grid of random gaussian distribution with the required symmetries in order for fft to return a real matrix. 
+'''returns a grid of random gaussian distribution with the required symmetries 
+in order for fft to return a real matrix. 
      n - shape of desired grid (square only at this point)'''
 def real(n):
     a = gaussian_complex( (n//2 -1, n-1) ) 
