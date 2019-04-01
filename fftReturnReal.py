@@ -4,10 +4,10 @@ import numpy as np
 valued only (approximately)'''
 
 
-'''creates transformation matrix for endomorphism that reflects the rows of a 
-matrix along the middle vertical axis
-    n - the number of rows of the matrix to be transformed'''
 def transformation(n):
+    '''creates transformation matrix for endomorphism that reflects the rows of 
+    a matrix along the middle vertical axis
+    -n: the number of rows of the matrix to be transformed'''
     matrix = [0]*n
     j = n-1
     matrix[j] = 1
@@ -23,42 +23,42 @@ def transformation(n):
         
     return matrix.astype(float)
 
-'''reflects a grid along the middle axis'''
 def reflect(grid):
+    '''reflects a grid along the middle axis'''
     trans_matrix = transformation(grid.shape[1])
     return np.matmul(grid,trans_matrix)
 
-'''reflects an array about right end. That is, [a,b,c] --> [c,b,a]'''
 def reflect_row(row):
+    '''reflects an array about right end. That is, [a,b,c] --> [c,b,a]'''
     reflected = []
     for entry in row[::-1]:
         reflected.append(entry)
         
     return reflected
 
-'''returns an array of random gaussian complex distribution of specified shape
-    shape - tuple or int. Returns either a grid or an array'''
 def gaussian_complex(shape):
+    '''returns an array of random gaussian complex distribution of specified shape
+    -shape: tuple or int. Returns either a grid or an array'''
     return np.random.normal(size =shape) + np.random.normal(size = shape)*1j
 
-'''flips grid with required symmetry'''
 def flip(conjugate_grid):
+    '''flips grid with required symmetry'''
     first = reflect(conjugate_grid.transpose()).transpose()
     second = []
     for row in first: 
         second.append(reflect_row(row))
     return np.array(second)
 
-''' returns the rows with required symmetries to complete grid'''
 def rows(shape):
+    ''' returns the rows with required symmetries to complete grid'''
     first = np.random.normal(size = shape) + np.random.normal(size = shape)*1j
     first_prime = np.insert(first, len(first),1)
     first_conj = np.conj(first)
     
     return np.insert(first_prime, len(first_prime), reflect_row(first_conj))
- 
-'''puts it all together'''
+
 def final(grid1, grid2, rows):
+    '''puts it all together'''
     first = np.vstack((rows, grid1, rows, grid2))
     side = np.array([np.insert(rows, 0, 1)]).T
     

@@ -3,13 +3,15 @@ from numpy.fft import fft2, fftshift
 from fftReturnReal import real 
 
 
-'''returns the radial distance of each pixel in n by n grid from center.'''
 def radii(n):
+    '''returns the radial distance of each pixel in n by n grid from center.'''
     y, x = np.indices((n,n))
     center = [n//2,n//2]
     return np.hypot(x - center[0], y - center[1])
 
 def field(ps_function, n = None):
+    '''returns a field in configuration space given a function describing the 
+    power spectrum of the field'''
     
     #arbitrary grid size. 1000 gives good resolution without sacrificing speed.
     if n is None:

@@ -3,32 +3,34 @@ from numpy.fft import fft2, fftshift
 
 '''This function returns the power spectrum of a given n by n grid of pixels'''
 
-'''given some bins and their dimensions, combines the first n bins (also returns 
-new dimension array)
-    bins - array of binned pixels
-    dims - array containing info about number of pixels per bins
-    n - number of bins to combine'''
 def combine_bins(bins, dims, n):
+    '''given some bins and their dimensions, combines the first n bins. Also 
+    returns new dimension array)
+    
+    -bins: array of binned pixels
+    -dims: array containing info about number of pixels per bins
+    -n: number of bins to combine'''
+
     b = np.concatenate(([sum(bins[:n])], bins[n:]))
     c = np.concatenate(([sum(dims[:n])],dims[n:]))
     return(b, c)
 
-'''grouping pixels into their respective bins. This is the problematic/slow part 
-of the code I think? Gotta be a better way to do it
-    sorted_pix - flattened array of the pixels in the grid sorted in order of 
-    ascending radial distance from center
 
-    bin_indices - array where each bin_indices[i] gives the index in sorted_pix 
-    of the last pixel going into the ith bin.
-'''
 def group_pixels(sorted_pix, bin_indices):
+    '''grouping pixels into their respective bins. This is the problematic/slow 
+    part of the code I think? Gotta be a better way to do it
+    
+    -sorted_pix: flattened array of the pixels in the grid sorted in order of 
+    ascending radial distance from center
+    -bin_indices: array where each bin_indices[i] gives the index in sorted_pix 
+    of the last pixel going into the ith bin.'''
     grouped_pix = [] 
     for i in range(1, len(bin_indices)):
         grouped_pix.append(sorted_pix[bin_indices[i-1]:bin_indices[i]]  )
     return np.array(grouped_pix)
     
-"creates grid of pixel positions, the center of the grid, and max radius"
 def grid(data):
+    "returns grid of pixel positions, the center of the grid, and max radius"
     n = data.shape[0]
     y,x = np.indices(data.shape)
     center = [n//2,n//2]
@@ -36,7 +38,16 @@ def grid(data):
     
     return (x,y,center, r_max, n)
 
-def power(data, n_bins =None, combine = None, bin_w = None):
+def power(data, n_bins =None, bin_w = None, combine = None):
+    ''' Returns the power spectrum of a given (2d) grid in configuration space.
+
+    -data: configuration space grid 
+    -resolution: the length scale corresponding to one pixel
+    -n_bins:  number of radial bins desired
+    -bin_w: alternative to n_bins, if want to specify the width of bins instead
+    -combine: int, number of bins to combine if want to use the combine_bins function 
+    '''
+
     data = fftshift(data)
     kspace = np.abs(fftshift(fft2(data)))**2
 
