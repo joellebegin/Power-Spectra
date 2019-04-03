@@ -64,10 +64,10 @@ def final(grid1, grid2, rows):
     
     return np.hstack((side, first))
 
-'''returns a grid of random gaussian distribution with the required symmetries 
-in order for fft to return a real matrix. 
-     n - shape of desired grid (square only at this point)'''
-def real(n):
+def fft_return_real(n):
+    '''returns a grid of random gaussian distribution with the required symmetries 
+    in order for fft to return a real matrix. 
+    -n: shape of desired grid (square only at this point)'''
     a = gaussian_complex( (n//2 -1, n-1) ) 
     a_conj = np.conj(a)
     b = flip(a_conj)
