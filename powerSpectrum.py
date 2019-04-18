@@ -5,7 +5,7 @@ from numpy.fft import fft2, fftshift
 
 def combine_bins(bins, dims, n):
     '''given some bins and their dimensions, combines the first n bins. Also 
-    returns new dimension array)
+    returns new dimension array.
     
     -bins: array of binned pixels
     -dims: array containing info about number of pixels per bins
@@ -16,18 +16,17 @@ def combine_bins(bins, dims, n):
     return(b, c)
 
 
-def group_pixels(sorted_pix, bin_indices):
-    '''grouping pixels into their respective bins. This is the problematic/slow 
+def group(array, group_indices):
+    '''grouping an array into bins. This is the problematic/slow 
     part of the code I think? Gotta be a better way to do it
     
-    -sorted_pix: flattened array of the pixels in the grid sorted in order of 
-    ascending radial distance from center
-    -bin_indices: array where each bin_indices[i] gives the index in sorted_pix 
-    of the last pixel going into the ith bin.'''
-    grouped_pix = [] 
-    for i in range(1, len(bin_indices)):
-        grouped_pix.append(sorted_pix[bin_indices[i-1]:bin_indices[i]]  )
-    return np.array(grouped_pix)
+    -array: data to bin
+    -group_indices: array where each group_indices[i] gives the index in 
+    the array of the first element going into the ith bin.'''
+    grouped = [] 
+    for i in range(1, len(group_indices)):
+        grouped.append(array[group_indices[i-1]:group_indices[i]]  )
+    return np.array(grouped)
     
 def grid(data):
     "returns grid of pixel positions, the center of the grid, and max radius"
@@ -38,7 +37,7 @@ def grid(data):
     
     return (x,y,center, r_max, n)
 
-def power(data, n_bins =None, bin_w = None, combine = None):
+def power(data, resolution, n_bins =None, bin_w = None, combine = None):
     ''' Returns the power spectrum of a given (2d) grid in configuration space.
 
     -data: configuration space grid 
@@ -70,10 +69,15 @@ def power(data, n_bins =None, bin_w = None, combine = None):
     indices = np.array([np.searchsorted(r_sorted, bins) for bins in bins])
     bin_dims = indices[1:] - indices[:-1] # num of pixels per bin
     
-    bins = group_pixels(pix_sorted, indices)
-    bin_sum = [np.sum(bins) for bins in bins] #optmize this also?
-    
+    pix_binned = group(pix_sorted, indices)
+    r_bins = group(r_sorted, indices)
+
+    bin_sum = [np.sum(bins) for bins in pix_binned] #optmize this also?
+    r_sum = [np.sum(bins) for bins in r_bins]
+
     if combine is not None: 
         bin_sum, bin_dims = combine_bins(bin_sum,bin_dims, combine) 
-        
-    return np.array(bin_sum/bin_dims)/(n**2)
+        r_sum, bin_dims = combine_bins(r_sum,bin_dims, combine)
+
+    
+    return np.array(r_sum/bin_dims)*resolution, np.array(bin_sum/bin_dims)/(n**2)
