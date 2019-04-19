@@ -2,6 +2,8 @@ import numpy as np
 from numpy.fft import fft2, fftshift
 
 '''This function returns the power spectrum of a given n by n grid of pixels'''
+'hello'
+
 
 def combine_bins(bins, dims, n):
     '''given some bins and their dimensions, combines the first n bins. Also 
