@@ -1,8 +1,9 @@
 import numpy as np
 from numpy.fft import fft2, fftshift
 
-'''This function returns the power spectrum of a given n by n grid of pixels'''
-'hello'
+'''This function returns the power spectrum of a given n by n grid of pixels
+Current Version: Apr 19 2019
+'''
 
 
 def combine_bins(bins, dims, n):
@@ -71,11 +72,12 @@ def power(data, resolution, n_bins =None, bin_w = None, combine = None):
     indices = np.array([np.searchsorted(r_sorted, bins) for bins in bins])
     bin_dims = indices[1:] - indices[:-1] # num of pixels per bin
     
+    #pixels and corresponding radii binned
     pix_binned = group(pix_sorted, indices)
-    r_bins = group(r_sorted, indices)
+    r_binned = group(r_sorted, indices)
 
     bin_sum = [np.sum(bins) for bins in pix_binned] #optmize this also?
-    r_sum = [np.sum(bins) for bins in r_bins]
+    r_sum = [np.sum(bins) for bins in r_binned]
 
     if combine is not None: 
         bin_sum, bin_dims = combine_bins(bin_sum,bin_dims, combine) 
