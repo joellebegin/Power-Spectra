@@ -40,7 +40,7 @@ def grid(data):
     
     return (x,y,center, r_max, n)
 
-def power(data, resolution, n_bins =None, bin_w = None, combine = None):
+def p_spec(data, resolution, n_bins =None, bin_w = None, combine = None):
     ''' Returns the power spectrum of a given (2d) grid in configuration space.
 
     -data: configuration space grid 
@@ -85,5 +85,6 @@ def power(data, resolution, n_bins =None, bin_w = None, combine = None):
         bin_sum, bin_dims = combine_bins(bin_sum,bin_dims, combine) 
         r_sum, bin_dims = combine_bins(r_sum,bin_dims, combine)
 
-    
-    return np.array(r_sum/bin_dims)*resolution_k, np.array(bin_sum/bin_dims)/area
+    power = np.array(bin_sum/bin_dims)/area
+    kmodes = np.array(r_sum/bin_dims)*resolution_k*2*np.pi
+    return kmodes, power
