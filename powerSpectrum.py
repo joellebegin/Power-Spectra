@@ -54,6 +54,8 @@ def power(data, resolution, n_bins =None, bin_w = None, combine = None):
     kspace = np.abs(fftshift(fft2(data)))**2
 
     x,y,center,r_max,n = grid(kspace)
+    resolution_k = 1/(n*resolution)
+    area = (n*resolution)**2
     
     #r - radial distance of each pixel from center
     r = np.hypot(x - center[0], y - center[1]) 
@@ -84,4 +86,4 @@ def power(data, resolution, n_bins =None, bin_w = None, combine = None):
         r_sum, bin_dims = combine_bins(r_sum,bin_dims, combine)
 
     
-    return np.array(r_sum/bin_dims)*resolution, np.array(bin_sum/bin_dims)/(n**2)
+    return np.array(r_sum/bin_dims)*resolution_k, np.array(bin_sum/bin_dims)/area
