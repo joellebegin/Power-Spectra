@@ -2,7 +2,7 @@ import numpy as np
 from numpy.fft import fft2, fftshift
 
 '''This function returns the power spectrum of a given n by n grid of pixels
-Current Version: Apr 19 2019
+Current Version: May 2 2019
 '''
 
 
@@ -24,7 +24,7 @@ def group(array, group_indices):
     part of the code I think? Gotta be a better way to do it
     
     -array: data to bin
-    -group_indices: array where each group_indices[i] gives the index in 
+    -group_indices: array where group_indices[i] gives the index in 
     the array of the first element going into the ith bin.'''
     grouped = [] 
     for i in range(1, len(group_indices)):
