@@ -1,5 +1,5 @@
 import numpy as np
-from numpy.fft import fft2, fftshift
+from numpy.fft import fft2, fftn, fftshift
 
 '''This function returns the power spectrum of a given n by n grid of pixels
 Current Version: May 5 2019
@@ -63,6 +63,7 @@ def radial_distances3d(kspace_abs):
     x,y,z,origin,r_max,n = grid3d(kspace_abs)
     radii = r3_norm(x-origin[0], y - origin[1], z - origin[2])
     return (radii, r_max, n)
+    
 def p_spec(data, resolution, ndims = 2, n_bins =None, bin_w = None, combine = None):
     ''' Returns the power spectrum of a given (2d) grid in configuration space.
 
@@ -76,6 +77,8 @@ def p_spec(data, resolution, ndims = 2, n_bins =None, bin_w = None, combine = No
 
     data = fftshift(data)
     kspace = np.abs(fftshift(fft2(data)))**2
+    if ndims is 3:
+        kspace = np.abs(fftshift(fftn(data)))**2
 
     #r - radial distance of each pixel from center
     r, r_max, n = radial_distances2d(kspace)
