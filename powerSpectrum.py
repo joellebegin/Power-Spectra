@@ -2,7 +2,7 @@ import numpy as np
 from numpy.fft import fft2, fftshift
 
 '''This function returns the power spectrum of a given n by n grid of pixels
-Current Version: May 2 2019
+Current Version: May 5 2019
 '''
 
 
