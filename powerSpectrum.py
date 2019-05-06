@@ -5,7 +5,6 @@ from numpy.fft import fft2, fftn, fftshift
 Current Version: May 5 2019
 '''
 
-
 def combine_bins(bins, dims, n):
     '''given some bins and their dimensions, combines the first n bins. Also
     returns new dimension array.
@@ -17,7 +16,6 @@ def combine_bins(bins, dims, n):
     b = np.concatenate(([sum(bins[:n])], bins[n:]))
     c = np.concatenate(([sum(dims[:n])],dims[n:]))
     return(b, c)
-
 
 def group(array, group_indices):
     '''grouping an array into bins. This is the problematic/slow
@@ -63,8 +61,8 @@ def radial_distances3d(kspace_abs):
     x,y,z,origin,r_max,n = grid3d(kspace_abs)
     radii = r3_norm(x-origin[0], y - origin[1], z - origin[2])
     return (radii, r_max, n)
-    
-def p_spec(data, resolution, ndims = 2, n_bins =None, bin_w = None, combine = None):
+
+def p_spec(data, resolution = 1, ndims = 2, n_bins =None, bin_w = None, combine = None):
     ''' Returns the power spectrum of a given (2d) grid in configuration space.
 
     -data: configuration space grid
@@ -76,15 +74,18 @@ def p_spec(data, resolution, ndims = 2, n_bins =None, bin_w = None, combine = No
     '''
 
     data = fftshift(data)
-    kspace = np.abs(fftshift(fft2(data)))**2
     if ndims is 3:
         kspace = np.abs(fftshift(fftn(data)))**2
+    elif ndims is 2:
+        kspace = np.abs(fftshift(fft2(data)))**2
+    
 
     #r - radial distance of each pixel from center
-    r, r_max, n = radial_distances2d(kspace)
     if ndims is 3:
         r, r_max, n = radial_distances3d(kspace)
 
+    elif ndims is 2: 
+        r, r_max, n = radial_distances2d(kspace)
     if bin_w is None:
         bin_w = r_max/n_bins #thickness of each radial bin
 
