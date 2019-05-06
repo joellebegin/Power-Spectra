@@ -86,6 +86,7 @@ def p_spec(data, resolution = 1, ndims = 2, n_bins =None, bin_w = None, combine 
 
     elif ndims is 2: 
         r, r_max, n = radial_distances2d(kspace)
+        
     if bin_w is None:
         bin_w = r_max/n_bins #thickness of each radial bin
 
