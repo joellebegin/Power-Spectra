@@ -2,6 +2,7 @@ import numpy as np
 from numpy.fft import fft2, fftn, fftshift
 
 '''This function returns the power spectrum of a given n by n grid of pixels
+
 Current Version: May 5 2019
 '''
 
@@ -78,7 +79,6 @@ def p_spec(data, resolution = 1, ndims = 2, n_bins =None, bin_w = None, combine 
         kspace = np.abs(fftshift(fftn(data)))**2
     elif ndims is 2:
         kspace = np.abs(fftshift(fft2(data)))**2
-    
 
     #r - radial distance of each pixel from center
     if ndims is 3:
