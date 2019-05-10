@@ -84,9 +84,16 @@ def fourier_space(data, ndims, resolution):
     resolution_k = 1/(n*resolution)
     return r, r_max, kspace, survey_size, resolution_k
 
-def p_spec(data, resolution = 1, ndims = 2, n_bins =None, bin_w = None, combine = None):
-    ''' Returns the power spectrum of a given (2d) grid in configuration space.
+def standard_error(bin_array):
+    '''computes standard error'''
+    standard_errors = []
+    for arr in bin_array:
+        standard_errors.append(np.std(arr))
+    return standard_errors
 
+def p_spec(data, resolution = 1, ndims = 2, n_bins =None, bin_w = None, combine = None):
+    ''' Returns: kmodes, power, err_power, err_k.
+    Parameters:
     -data: configuration space grid/box
     -resolution: the length scale corresponding to one pixel/voxel
     -ndims: int, 2 or 3. dimensions of data
@@ -120,6 +127,7 @@ def p_spec(data, resolution = 1, ndims = 2, n_bins =None, bin_w = None, combine 
     bin_sum = [np.sum(bins) for bins in pix_binned] #optmize this also?
     r_sum = [np.sum(bins) for bins in r_binned]
 
+
     if combine is not None:
         bin_sum, bin_dims = combine_bins(bin_sum,bin_dims, combine)
         r_sum, bin_dims = combine_bins(r_sum,bin_dims, combine)
@@ -127,4 +135,7 @@ def p_spec(data, resolution = 1, ndims = 2, n_bins =None, bin_w = None, combine 
     power = np.array(bin_sum/bin_dims)/survey_size
     kmodes = np.array(r_sum/bin_dims)*resolution_k*2*np.pi
 
-    return kmodes, power
+    err_power = standard_error(pix_binned)/survey_size
+    err_k = standard_error(r_binned)*resolution_k*2*np.pi
+
+    return kmodes, power, err_power, err_k
