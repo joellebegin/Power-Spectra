@@ -1,9 +1,9 @@
 import numpy as np
 from numpy.fft import fft2, fftn, fftshift
 
-'''This function returns the power spectrum of a given n by n grid of pixels
+'''This function returns the power spectrum of a given grid/box of pixels
 
-Current Version: May 5 2019
+Current Version: May 10 2019
 '''
 
 def combine_bins(bins, dims, n):
@@ -33,7 +33,8 @@ def group(array, group_indices):
 def grid2d(data):
     '''returns grid of pixel positions, origin, and max radius (2d grid)
      -r_max: since our origin is not geometric center of grid, this is the
-     maximum
+     radius of the circle/sphere that reaches the edge of the grid, centered on 
+     the fft origin.
     '''
     n = data.shape[0]
     y,x = np.indices(data.shape)
@@ -43,6 +44,11 @@ def grid2d(data):
     return (x,y,origin, r_max, n)
 
 def grid3d(data):
+    '''returns grid of pixel positions, origin, and max radius (3d grid)
+     -r_max: since our origin is not geometric center of grid, this is the
+     radius of the circle/sphere that reaches the edge of the grid, centered on 
+     the fft origin.
+    '''
     n = data.shape[0]
     x,y,z = np.indices(data.shape)
     origin = [n//2,n//2,n//2]
@@ -51,6 +57,7 @@ def grid3d(data):
     return (x,y,z, origin, r_max, n)
 
 def r3_norm(rx,ry,rz):
+    '''calculating length of each voxel's radial distance from origin'''
     return np.sqrt(rx**2 + ry**2 + rz**2)
 
 def radial_distances2d(kspace_abs):
@@ -63,30 +70,34 @@ def radial_distances3d(kspace_abs):
     radii = r3_norm(x-origin[0], y - origin[1], z - origin[2])
     return (radii, r_max, n)
 
+def fourier_space(data, ndims, resolution):
+    data_shift = fftshift(data)
+    if ndims is 3: 
+        kspace = np.abs(fftshift(fftn(data_shift)))**2
+        r, r_max, n = radial_distances3d(kspace)
+        survey_size = (n*resolution)**3
+    elif ndims is 2: 
+        kspace = np.abs(fftshift(fft2(data_shift)))**2
+        r, r_max, n = radial_distances2d(kspace)
+        survey_size = (n*resolution)**2
+
+    resolution_k = 1/(n*resolution)
+    return r, r_max, kspace, survey_size, resolution_k
+
 def p_spec(data, resolution = 1, ndims = 2, n_bins =None, bin_w = None, combine = None):
     ''' Returns the power spectrum of a given (2d) grid in configuration space.
 
-    -data: configuration space grid
-    -resolution: the length scale corresponding to one pixel
+    -data: configuration space grid/box
+    -resolution: the length scale corresponding to one pixel/voxel
     -ndims: int, 2 or 3. dimensions of data
     -n_bins:  number of radial bins desired
     -bin_w: alternative to n_bins, if want to specify the width of bins instead
     -combine: int, number of bins to combine if want to use the combine_bins function
     '''
-
-    data = fftshift(data)
-    if ndims is 3:
-        kspace = np.abs(fftshift(fftn(data)))**2
-    elif ndims is 2:
-        kspace = np.abs(fftshift(fft2(data)))**2
-
-    #r - radial distance of each pixel from center
-    if ndims is 3:
-        r, r_max, n = radial_distances3d(kspace)
-
-    elif ndims is 2: 
-        r, r_max, n = radial_distances2d(kspace)
-        
+    #radial distances from origin of each pixel/voxel, max radius to consider, 
+    #kspace data, survey area/volume, and kspace resolution. 
+    r, r_max, k_data, survey_size, resolution_k = fourier_space(data, ndims, resolution) 
+    
     if bin_w is None:
         bin_w = r_max/n_bins #thickness of each radial bin
 
@@ -96,7 +107,7 @@ def p_spec(data, resolution = 1, ndims = 2, n_bins =None, bin_w = None, combine 
     #ind is here so as to not lose track of which pixel corresponds to which
     # radius after sorting
     r_sorted = r.flat[ind]
-    pix_sorted = kspace.flat[ind]
+    pix_sorted = k_data.flat[ind]
 
     #indices corresponding to first element in each bin
     indices = np.array([np.searchsorted(r_sorted, bins) for bins in bins])
@@ -113,10 +124,7 @@ def p_spec(data, resolution = 1, ndims = 2, n_bins =None, bin_w = None, combine 
         bin_sum, bin_dims = combine_bins(bin_sum,bin_dims, combine)
         r_sum, bin_dims = combine_bins(r_sum,bin_dims, combine)
 
-    power = np.array(bin_sum/bin_dims)/((n*resolution)**2)
-    if ndims is 3:
-        power = np.array(bin_sum/bin_dims)/((n*resolution)**3)
-
-    resolution_k = 1/(n*resolution)
+    power = np.array(bin_sum/bin_dims)/survey_size
     kmodes = np.array(r_sum/bin_dims)*resolution_k*2*np.pi
+
     return kmodes, power
