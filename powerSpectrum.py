@@ -1,141 +1,110 @@
 import numpy as np
-from numpy.fft import fft2, fftn, fftshift
+from numpy.fft import fftn, fftshift
 
-'''This function returns the power spectrum of a given grid/box of pixels
+def fourier(f):
+    return fftshift(fftn(fftshift(f)))
 
-Current Version: May 10 2019
-'''
-
-def combine_bins(bins, dims, n):
-    '''given some bins and their dimensions, combines the first n bins. Also
-    returns new dimension array.
-
-    -bins: array of binned pixels
-    -dims: array containing info about number of pixels per bins
-    -n: number of bins to combine'''
-
-    b = np.concatenate(([sum(bins[:n])], bins[n:]))
-    c = np.concatenate(([sum(dims[:n])],dims[n:]))
-    return(b, c)
-
-def group(array, group_indices):
-    '''grouping an array into bins. This is the problematic/slow
-    part of the code I think? Gotta be a better way to do it
-
-    -array: data to bin
-    -group_indices: array where group_indices[i] gives the index in
-    the array of the first element going into the ith bin.'''
-    grouped = []
-    for i in range(1, len(group_indices)):
-        grouped.append(array[group_indices[i-1]:group_indices[i]]  )
-    return np.array(grouped)
-
-def grid2d(data):
-    '''returns grid of pixel positions, origin, and max radius (2d grid)
-     -r_max: since our origin is not geometric center of grid, this is the
-     radius of the circle/sphere that reaches the edge of the grid, centered on 
-     the fft origin.
-    '''
-    n = data.shape[0]
-    y,x = np.indices(data.shape)
-    origin = [n//2,n//2]
-    r_max = (n-0.5) - origin[0]
-
-    return (x,y,origin, r_max, n)
-
-def grid3d(data):
-    '''returns grid of pixel positions, origin, and max radius (3d grid)
-     -r_max: since our origin is not geometric center of grid, this is the
-     radius of the circle/sphere that reaches the edge of the grid, centered on 
-     the fft origin.
-    '''
-    n = data.shape[0]
-    x,y,z = np.indices(data.shape)
-    origin = [n//2,n//2,n//2]
-    r_max = (n-0.5) - origin[0]
-
-    return (x,y,z, origin, r_max, n)
-
-def r3_norm(rx,ry,rz):
-    '''calculating length of each voxel's radial distance from origin'''
-    return np.sqrt(rx**2 + ry**2 + rz**2)
-
-def radial_distances2d(kspace_abs):
-    x,y,origin,r_max,n = grid2d(kspace_abs)
-    radii = np.hypot(x - origin[0], y - origin[1])
-    return (radii, r_max, n)
-
-def radial_distances3d(kspace_abs):
-    x,y,z,origin,r_max,n = grid3d(kspace_abs)
-    radii = r3_norm(x-origin[0], y - origin[1], z - origin[2])
-    return (radii, r_max, n)
-
-def fourier_space(data, ndims, resolution):
-    data_shift = fftshift(data)
-    if ndims is 3: 
-        kspace = np.abs(fftshift(fftn(data_shift)))**2
-        r, r_max, n = radial_distances3d(kspace)
-        survey_size = (n*resolution)**3
-    elif ndims is 2: 
-        kspace = np.abs(fftshift(fft2(data_shift)))**2
-        r, r_max, n = radial_distances2d(kspace)
-        survey_size = (n*resolution)**2
-
-    resolution_k = 1/(n*resolution)
-    return r, r_max, kspace, survey_size, resolution_k
-
-def standard_error(bin_array):
-    '''computes standard error'''
-    standard_errors = []
-    for arr in bin_array:
-        standard_errors.append(np.std(arr))
-    return standard_errors
-
-def p_spec(data, resolution = 1, ndims = 2, n_bins =None, bin_w = None, combine = None):
-    ''' Returns: kmodes, power, err_power, err_k.
-    Parameters:
-    -data: configuration space grid/box
-    -resolution: the length scale corresponding to one pixel/voxel
-    -ndims: int, 2 or 3. dimensions of data
-    -n_bins:  number of radial bins desired
-    -bin_w: alternative to n_bins, if want to specify the width of bins instead
-    -combine: int, number of bins to combine if want to use the combine_bins function
-    '''
-    #radial distances from origin of each pixel/voxel, max radius to consider, 
-    #kspace data, survey area/volume, and kspace resolution. 
-    r, r_max, k_data, survey_size, resolution_k = fourier_space(data, ndims, resolution) 
+class PowerSpectrum():
+    def __init__(self, field, bins = None, bin_w = 1, L = 300):
+        '''
+        - field: field in fourier space
+        - bins: array, if want to give bin edges in fourier space units
+        - bin_w: else, specify bin width in pixel units
+        - L: real space length of box
+        '''
+        self.field = field
+        self.bins = bins
+        self.bin_w = bin_w
+        self.L = L
+        
+        self.ndims = len(field.shape)
+        self.n = field.shape[0] #number of pixels along one axis
+        self.abs_squared = np.abs(field)**2 #amplitude of field squared
+        self.delta_k = 2*np.pi/self.L #kspace resolution of 1 pixel
+        self.survey_size = (L**self.ndims)
     
-    if bin_w is None:
-        bin_w = r_max/n_bins #thickness of each radial bin
+    def r3_norm(self,rx,ry,rz):
+        '''calculating length of each voxel's radial distance from origin'''
+        return np.sqrt(rx**2 + ry**2 + rz**2)
+    
+    def grid(self):
+        '''defines some useful variables
+        -r_max: maximum radial distance we consider
+        - radii: grid that contains radial distance of each pixel from origin, 
+        in pixel units'''
+        
+        origin = self.n//2
+        self.rmax = self.n - 0.5 - origin
+        
+        if self.ndims == 2: 
+            x,y = np.indices(self.field.shape)
+            self.radii = np.hypot(x - origin, y - origin)*self.delta_k
+            
+        elif self.ndims == 3: 
+            x,y,z = np.indices(self.field.shape)
+            self.radii = self.r3_norm(x-origin, y - origin, z - origin)*self.delta_k
+    
+    def sort(self):
+        sort_ind = np.argsort(self.radii.flat)
+        self.r_sorted = self.radii.flat[sort_ind]
+        self.vals_sorted = self.abs_squared.flat[sort_ind] 
+        
+    def get_bin_ind(self):
+        bin_ind = [1]
+        for bin_val in self.bins:
+            val = np.argmax( self.r_sorted > bin_val)
+            if val == 0: #ie bin_val > r_max
+                val = len(self.r_sorted)
+            bin_ind.append(val-1)
+        self.bin_ind = np.array(bin_ind)
 
-    bins = np.arange(0,r_max+bin_w,bin_w) #bin ranges
+    def average_bins(self):
+        vals_binned = []
+        r_binned = []
+        bin_dims = []
+        
+        for i in range(1, len(self.bin_ind)):
+            r_binned.append(np.sum(self.r_sorted[self.bin_ind[i-1]:self.bin_ind[i]+1]))
+            vals_binned.append(np.sum(self.vals_sorted[self.bin_ind[i-1]:self.bin_ind[i]+1]))
+            bin_dims.append(len(self.r_sorted[self.bin_ind[i-1]:self.bin_ind[i]+1]))
+        
+        self.vals_binned = np.array(vals_binned)
+        self.r_binned = np.array(r_binned)
+        self.bin_dims = np.array(bin_dims)
+        
+        self.field_bins = self.vals_binned/self.bin_dims
+        self.average_k = self.r_binned/self.bin_dims
+    
+    def p_spec(self):
+        
+        self.grid() #sets up grid of radial distances
+        
+        if self.bins is None: 
+            #use bin_w sparingly. I don't trust it
+            self.bins = np.arange(0,self.rmax + self.bin_w, self.bin_w)*self.delta_k
+        
+        self.sort() #sorting radii + field vals (increasing)
+        self.get_bin_ind() #indices determing which elements go into bins
+        self.average_bins() #computing average of bins
+        self.power = self.field_bins/self.survey_size
+        
+    def compute_pspec(self, del_squared = True, avg_k = True):
+        self.p_spec()
+        
+        delta_squared = self.average_k**3*self.power/(2*np.pi**2)
+        return self.average_k, delta_squared
 
-    ind = np.argsort(r.flat)
-    #ind is here so as to not lose track of which pixel corresponds to which
-    # radius after sorting
-    r_sorted = r.flat[ind]
-    pix_sorted = k_data.flat[ind]
+def main():
+    filename = input()
 
-    #indices corresponding to first element in each bin
-    indices = np.array([np.searchsorted(r_sorted, bins) for bins in bins])
-    bin_dims = indices[1:] - indices[:-1] # num of pixels per bin
+    data = np.loadtxt(filename, delimiter=',')
+    box = np.reshape(data, (200,200,200))
 
-    #pixels and corresponding radii binned
-    pix_binned = group(pix_sorted, indices)
-    r_binned = group(r_sorted, indices)
+    bins =np.logspace(np.log10(0.021), np.log10(3), num=13)
 
-    bin_sum = [np.sum(bins) for bins in pix_binned] #optmize this also?
-    r_sum = [np.sum(bins) for bins in r_binned]
+    k,delk = PowerSpectrum(fourier(box), bins = bins).compute_pspec()
+    
+    np.savetxt( filename + '.csv', np.vstack((k,delk)), delimiter=',')
 
-
-    if combine is not None:
-        bin_sum, bin_dims = combine_bins(bin_sum,bin_dims, combine)
-        r_sum, bin_dims = combine_bins(r_sum,bin_dims, combine)
-
-    power = np.array(bin_sum/bin_dims)/survey_size
-    kmodes = np.array(r_sum/bin_dims)*resolution_k*2*np.pi
-
-    err_power = standard_error(pix_binned)/survey_size
-    err_k = standard_error(r_binned)*resolution_k*2*np.pi
-
-    return kmodes, power, err_power, err_k
+if __name__ == "__main__":
+    main()
