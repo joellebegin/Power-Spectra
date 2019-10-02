@@ -21,7 +21,8 @@ class PowerSpectrum():
         self.n = field.shape[0] #number of pixels along one axis
         self.abs_squared = np.abs(field)**2 #amplitude of field squared
         self.delta_k = 2*np.pi/self.L #kspace resolution of 1 pixel
-        self.survey_size = (L**self.ndims)
+        
+        self.survey_size = (L**self.ndims)#volume of box
     
     def r3_norm(self,rx,ry,rz):
         '''calculating length of each voxel's radial distance from origin'''
@@ -30,8 +31,8 @@ class PowerSpectrum():
     def grid(self):
         '''defines some useful variables
         -r_max: maximum radial distance we consider
-        - radii: grid that contains radial distance of each pixel from origin, 
-        in pixel units'''
+        -radii: grid that contains radial distance of each pixel from origin, 
+        in kspace units'''
         
         origin = self.n//2
         self.rmax = self.n - 0.5 - origin
@@ -45,11 +46,18 @@ class PowerSpectrum():
             self.radii = self.r3_norm(x-origin, y - origin, z - origin)*self.delta_k
     
     def sort(self):
+        ''' sorts radii, and the field value corresponding to each radius.
+        sort_ind is here so as to not lose track of which radius corresponds
+        to which field value
+        
+        data is flattened in this step'''
         sort_ind = np.argsort(self.radii.flat)
         self.r_sorted = self.radii.flat[sort_ind]
         self.vals_sorted = self.abs_squared.flat[sort_ind] 
         
     def get_bin_ind(self):
+        '''given the desired bin edges, determines the index of the last pixel
+        going into this bin'''
         bin_ind = [1]
         for bin_val in self.bins:
             val = np.argmax( self.r_sorted > bin_val)
@@ -59,11 +67,14 @@ class PowerSpectrum():
         self.bin_ind = np.array(bin_ind)
 
     def average_bins(self):
+        ''' puts things in bins, averages the bins
+        -average_k: average k value going into each bin
+        -field_bins: field values put into bins and averaged'''
         vals_binned = []
         r_binned = []
         bin_dims = []
         
-        for i in range(1, len(self.bin_ind)):
+        for i in range(1, len(self.bin_ind)): #THIS IS SLOW AND UGLY. FIX ONE DAY
             r_binned.append(np.sum(self.r_sorted[self.bin_ind[i-1]:self.bin_ind[i]+1]))
             vals_binned.append(np.sum(self.vals_sorted[self.bin_ind[i-1]:self.bin_ind[i]+1]))
             bin_dims.append(len(self.r_sorted[self.bin_ind[i-1]:self.bin_ind[i]+1]))
@@ -76,6 +87,7 @@ class PowerSpectrum():
         self.average_k = self.r_binned/self.bin_dims
     
     def p_spec(self):
+        '''like the main method. Organizes stuff'''
         
         self.grid() #sets up grid of radial distances
         
@@ -104,7 +116,7 @@ def main():
 
     k,delk = PowerSpectrum(fourier(box), bins = bins).compute_pspec()
     
-    np.savetxt( filename + '.csv', np.vstack((k,delk)), delimiter=',')
+    np.savetxt( "pspec_" + filename + '.csv', np.vstack((k,delk)), delimiter=',')
 
 if __name__ == "__main__":
     main()
