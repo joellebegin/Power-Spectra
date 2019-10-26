@@ -28,7 +28,7 @@ class PowerSpectrum():
         '''calculating length of each voxel's radial distance from origin'''
         return np.sqrt(rx**2 + ry**2 + rz**2)
     
-    def grid(self):
+    def grid(self, del_squared):
         '''defines some useful variables
         -r_max: maximum radial distance we consider
         -radii: grid that contains radial distance of each pixel from origin, 
@@ -44,7 +44,10 @@ class PowerSpectrum():
         elif self.ndims == 3: 
             x,y,z = np.indices(self.field.shape)
             self.radii = self.r3_norm(x-origin, y - origin, z - origin)*self.delta_k
-    
+        
+        if del_squared:
+                self.abs_squared *= self.radii**3
+                
     def sort(self):
         ''' sorts radii, and the field value corresponding to each radius.
         sort_ind is here so as to not lose track of which radius corresponds
@@ -86,10 +89,10 @@ class PowerSpectrum():
         self.field_bins = self.vals_binned/self.bin_dims
         self.average_k = self.r_binned/self.bin_dims
     
-    def p_spec(self):
+    def p_spec(self, del_squared):
         '''like the main method. Organizes stuff'''
         
-        self.grid() #sets up grid of radial distances
+        self.grid(del_squared) #sets up grid of radial distances
         
         if self.bins is None: 
             #use bin_w sparingly. I don't trust it
@@ -100,11 +103,13 @@ class PowerSpectrum():
         self.average_bins() #computing average of bins
         self.power = self.field_bins/self.survey_size
         
-    def compute_pspec(self, del_squared = True, avg_k = True):
-        self.p_spec()
+        if del_squared:
+            self.power *= (1/(2*np.pi**2))
         
-        delta_squared = self.average_k**3*self.power/(2*np.pi**2)
-        return self.average_k, delta_squared
+    def compute_pspec(self, del_squared = True, avg_k = True):
+        self.p_spec(del_squared)
+        return self.average_k, self.power
+
 
 def main():
     filename = input()
