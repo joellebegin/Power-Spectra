@@ -12,12 +12,9 @@ def fft_return_real(ndims,n):
                     field[i,j,k] = np.random.normal() + 1j*np.random.normal()
                     reflection = (-1*( np.array([i,j,k]) - half) + half)%n
                     field[tuple(reflection.astype(int))] = np.conj(field[i,j,k])
-        field[half,half,half] = 1
-        field[0,0,half] = 1
-        field[0,half,0] = 1
-        field[0,0,half] = 1
-        field[0,0,0] = 1
-
+                    if (reflection == np.array([i,j,k])).all:
+                        field[i,j,k] = np.real(field[i,j,k])
+    
     elif ndims ==2:
         field = np.zeros((n,n), dtype = complex)
         for i in range(n):
@@ -25,12 +22,8 @@ def fft_return_real(ndims,n):
                 field[i,j] = np.random.normal() + 1j*np.random.normal()
                 reflection = (-1*( np.array([i,j]) - half) + half)%n
                 field[tuple(reflection.astype(int))] = np.conj(field[i,j])
-
-        field[half,half] = 1
-        field[0,half] = 1
-        field[half,0] = 1
-        field[0,0] = 1
-
+                if (reflection == np.array([i,j])).all:
+                        field[i,j] = np.real(field[i,j])
     return field
 
 def r3_norm(rx,ry,rz):
@@ -67,9 +60,10 @@ def field(ps_function, shape, L):
     #distance from origin of each pixel/voxel
     r = radii(ndims,n,L)
     
+    survey_volume = L**ndims
     #each pixel will be drawn from gaussian distribution of this stdv
-    stdv_r = np.sqrt( (0.5)*(n**2)*ps_function(r) )
+    stdv_r = np.sqrt( (0.5)*survey_volume*ps_function(r) )
 
-    #scaling random gaussian dist according to given power spectrum
+    #scaling rand gaussian distribution according to given power spectrum
     kspace = rand_gauss * stdv_r 
     return np.real(fftshift(fftn(fftshift(kspace))))
