@@ -167,15 +167,16 @@ class PowerSpectrum():
         
         r_binned = []
         spectra_binned = []
+        bin_dims = []
         for i in range(1, len(self.bin_ind)): #THIS IS SLOW AND UGLY. FIX ONE DAY
             r_binned.append(np.sum(self.k_parallel_sorted[self.bin_ind[i-1]:self.bin_ind[i]+1]))
             spectra_binned.append(np.sum(self.k_perp_sorted[self.bin_ind[i-1]:self.bin_ind[i]+1], axis = 0))
+            bin_dims.append(len(self.k_parallel_sorted[self.bin_ind[i-1]:self.bin_ind[i]+1]))
         
-        self.r_binned = np.array(r_binned)
-        self.spectra_binned = np.array(spectra_binned)
-        
-        return self.r_binned, self.spectra_binned
-        
+        self.bin_dims = np.array(bin_dims)
+        self.r_binned = np.array(r_binned)/self.bin_dims
+        self.spectra_binned = np.array(spectra_binned)/self.bin_dims
+
 def main():
     filename = input()
 
