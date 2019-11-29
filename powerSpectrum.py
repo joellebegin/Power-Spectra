@@ -7,16 +7,20 @@ class PowerSpectrum():
     def fourier(self,f):
         return fftshift(fftn(fftshift(f)))
 
-    def __init__(self, field, bins = None, bin_w = None, L = 300):
+    def __init__(self, field, do_ft = True, bins = None, bin_w = None, L = 300):
         '''
-        - field: field in real space
+        - field: field to compute power spectrum (either real space or fourier space)
+        - do_ft: if field is given in real space, set to True
         - bins: array, if want to give bin edges in fourier space units
         - bin_w: else, specify bin width in pixel units
         - L: real space length of box
         '''
 
-        self.field = field
-        self.field_fourier = self.fourier(field)
+        if do_ft:
+            self.field_fourier = self.fourier(field)
+        else:
+            self.field_fourier = field
+        
         self.abs_squared = np.abs(self.field_fourier)**2
 
         self.bins = bins
@@ -64,7 +68,7 @@ class PowerSpectrum():
             
         #default when nothing is given
         elif self.bins is None:
-            self.bins = np.logspace(np.log10(0.021), np.log10(max(self.r_sorted)), num=13)
+            self.bins = np.logspace(np.log10(0.021), np.log10(self.rmax*self.delta_k), num=13)
 
 
     def grid(self, del_squared):
@@ -72,11 +76,11 @@ class PowerSpectrum():
         the origin in kspace'''
         
         if self.ndims == 2: 
-            x,y = np.indices(self.field.shape)
+            x,y = np.indices(self.field_fourier.shape)
             self.radii = np.hypot(x - self.origin, y - self.origin)*self.delta_k
             
         elif self.ndims == 3: 
-            x,y,z = np.indices(self.field.shape)
+            x,y,z = np.indices(self.field_fourier.shape)
             self.radii = LA.norm((x-self.origin, y-self.origin, z-self.origin), 
                     axis = 0)*self.delta_k
         
@@ -95,17 +99,23 @@ class PowerSpectrum():
         self.r_sorted = self.radii.flat[sort_ind]
         self.vals_sorted = self.abs_squared.flat[sort_ind] 
         
-    def get_bin_ind(self):
+    def get_bin_ind(self, r = None):
         '''given the desired bin edges, determines the index of the last pixel
-        going into this bin'''
+        going into this bin
+        
+        -r: if want to give another array to find bin indices for'''
         self.get_bins()
         
+        if r is not None: 
+            self.r_to_bin = r
+        else:
+            self.r_to_bin = self.r_sorted
         bin_ind = [0]
         
         for bin_val in self.bins:
-            val = np.argmax( self.r_sorted > bin_val)
+            val = np.argmax( self.r_to_bin > bin_val)
             if val == 0: #ie bin_val > r_max
-                val = len(self.r_sorted)
+                val = len(self.r_to_bin)
             bin_ind.append(val-1)
         self.bin_ind = np.array(bin_ind)
 
@@ -131,21 +141,48 @@ class PowerSpectrum():
         self.average_k = self.r_binned/self.bin_dims
     
     
-        
     def compute_pspec(self, del_squared = True):
         self.p_spec(del_squared)
         return self.average_k, self.power
-
-
+    
+    def cylindrical_pspec(self, del_squared = False):
+        plane_pspec = []
+        self.k_parallel = np.arange(-self.n//2, self.n//2, 1)*self.delta_k
+        self.k_parallel_norm = np.abs(self.k_parallel)
+        
+        
+        for plane in self.field_fourier:
+            k,power = PowerSpectrum(plane, do_ft= False).compute_pspec(del_squared)
+            plane_pspec.append(power)
+            
+        self.plane_pspec = np.array(plane_pspec)
+        
+        
+        self.sort_ind = np.argsort(self.k_parallel_norm)
+        self.k_parallel_sorted = self.k_parallel_norm[self.sort_ind]
+        self.k_perp_sorted = self.plane_pspec[self.sort_ind]
+        
+        
+        self.get_bin_ind(r = self.k_parallel_sorted)
+        
+        r_binned = []
+        spectra_binned = []
+        for i in range(1, len(self.bin_ind)): #THIS IS SLOW AND UGLY. FIX ONE DAY
+            r_binned.append(np.sum(self.k_parallel_sorted[self.bin_ind[i-1]:self.bin_ind[i]+1]))
+            spectra_binned.append(np.sum(self.k_perp_sorted[self.bin_ind[i-1]:self.bin_ind[i]+1], axis = 0))
+        
+        self.r_binned = np.array(r_binned)
+        self.spectra_binned = np.array(spectra_binned)
+        
+        return self.r_binned, self.spectra_binned
+        
 def main():
     filename = input()
 
     data = np.loadtxt(filename, delimiter=',')
     box = np.reshape(data, (200,200,200))
 
-    bins =np.logspace(np.log10(0.021), np.log10(3), num=13)
-
-    k,delk = PowerSpectrum(box, bins = bins).compute_pspec()
+    k,delk = PowerSpectrum(box).compute_pspec()
     
     np.savetxt( "pspec_" + filename + '.csv', np.vstack((k,delk)), delimiter=',')
 
