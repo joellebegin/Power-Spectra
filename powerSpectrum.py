@@ -62,6 +62,10 @@ class PowerSpectrum():
         sort_ind = np.argsort(self.radii.flat)
         self.r_sorted = self.radii.flat[sort_ind]
         self.vals_sorted = self.abs_squared.flat[sort_ind] 
+
+        if self.ignore_0:
+            self.r_sorted = self.r_sorted[1:]
+            self.vals_sorted = self.vals_sorted[1:]
         
     def get_bin_ind(self):
         '''given the desired bin edges, determines the index of the last pixel
@@ -94,8 +98,10 @@ class PowerSpectrum():
         self.field_bins = self.vals_binned/self.bin_dims
         self.average_k = self.r_binned/self.bin_dims
     
-    def p_spec(self, del_squared):
+    def p_spec(self, del_squared, ignore_0):
         '''like the main method. Organizes stuff'''
+
+        self.ignore_0 = ignore_0
         
         self.grid(del_squared) #sets up grid of radial distances
         
@@ -108,8 +114,8 @@ class PowerSpectrum():
         if del_squared:
             self.power *= (1/(2*np.pi**2))
         
-    def compute_pspec(self, del_squared = True):
-        self.p_spec(del_squared)
+    def compute_pspec(self, del_squared = True, ignore_0 = False):
+        self.p_spec(del_squared, ignore_0)
         return self.average_k, self.power
 
 def main():
