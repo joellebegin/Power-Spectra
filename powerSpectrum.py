@@ -3,11 +3,6 @@ from numpy.fft import fftn, fftshift
 
 class PowerSpectrum():
 
-    def fourier(self,f):
-        fourier_transform =  fftshift(fftn(fftshift(f)))
-        scaled = fourier_transform*(self.delta_r**self.ndims)
-        return scaled
-
     def __init__(self, field, bins = None, L = 300):
         '''
         - field: field in fourier space
@@ -15,6 +10,14 @@ class PowerSpectrum():
         - bin_w: else, specify bin width in pixel units
         - L: real space length of box
         '''
+
+        self.L = L
+        
+        self.ndims = len(field.shape)
+        self.n = field.shape[0] #number of pixels along one axis
+
+        self.delta_r = self.L/self.n #real space resolution of 1 pixel
+
         self.field = field
         self.field_fourier = self.fourier(field)
 
@@ -23,16 +26,17 @@ class PowerSpectrum():
         else:
             self.bins = np.logspace(np.log10(0.021), np.log10(3), num=13)
 
-        self.L = L
         
-        self.ndims = len(field.shape)
-        self.n = field.shape[0] #number of pixels along one axis
         self.abs_squared = np.abs(self.field_fourier)**2 #amplitude of field squared
         self.delta_k = 2*np.pi/self.L #kspace resolution of 1 pixel
-        self.delta_r = self.L/self.n #real space resolution of 1 pixel
 
-        self.survey_size = (self.n**self.ndims)#volume of box
+        self.survey_size = (self.L**self.ndims)#volume of box
     
+    def fourier(self,f):
+        fourier_transform =  fftshift(fftn(fftshift(f)))
+        scaled = fourier_transform*(self.delta_r**self.ndims)
+        return scaled
+
     def r3_norm(self,rx,ry,rz):
         '''calculating length of each voxel's radial distance from origin'''
         return np.sqrt(rx**2 + ry**2 + rz**2)
