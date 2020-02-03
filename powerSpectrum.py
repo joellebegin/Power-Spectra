@@ -4,7 +4,9 @@ from numpy.fft import fftn, fftshift
 class PowerSpectrum():
 
     def fourier(self,f):
-        return fftshift(fftn(fftshift(f)))
+        fourier_transform =  fftshift(fftn(fftshift(f)))
+        scaled = fourier_transform*(self.delta_r**self.ndims)
+        return scaled
 
     def __init__(self, field, bins = None, L = 300):
         '''
@@ -27,7 +29,8 @@ class PowerSpectrum():
         self.n = field.shape[0] #number of pixels along one axis
         self.abs_squared = np.abs(self.field_fourier)**2 #amplitude of field squared
         self.delta_k = 2*np.pi/self.L #kspace resolution of 1 pixel
-        
+        self.delta_r = self.L/self.n #real space resolution of 1 pixel
+
         self.survey_size = (self.n**self.ndims)#volume of box
     
     def r3_norm(self,rx,ry,rz):
