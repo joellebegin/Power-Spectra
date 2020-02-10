@@ -4,10 +4,7 @@ import numpy.linalg as LA
 
 class PowerSpectrum():
 
-    def fourier(self,f):
-        return fftshift(fftn(fftshift(f)))
-
-    def __init__(self, field, do_ft = True, bins = None, bin_w = None, L = 300):
+    def __init__(self, field, bins = None, L = 300):
         '''
         - field: field to compute power spectrum (either real space or fourier space)
         - do_ft: if field is given in real space, set to True
@@ -16,6 +13,16 @@ class PowerSpectrum():
         - L: real space length of box
         '''
 
+        self.L = L
+        
+        self.ndims = len(field.shape)
+        self.n = field.shape[0] #number of pixels along one axis
+
+        self.delta_r = self.L/self.n #real space resolution of 1 pixel
+
+        self.field = field
+        self.field_fourier = self.fourier(field)
+
         if do_ft:
             self.field_fourier = self.fourier(field)
         else:
@@ -23,26 +30,20 @@ class PowerSpectrum():
         
         self.abs_squared = np.abs(self.field_fourier)**2
 
-        self.bins = bins
-        self.bin_w = bin_w
         
-        self.L = L
-        
-        
-        self.ndims = len(field.shape) #dimensions of box
-        self.n = field.shape[0] #number of pixels along one axis
+        self.abs_squared = np.abs(self.field_fourier)**2 #amplitude of field squared
         self.delta_k = 2*np.pi/self.L #kspace resolution of 1 pixel
-        
-        self.survey_size = (self.n**self.ndims)#volume of box
-        
-        self.origin = self.n//2 #origin of coordinate system
-            
+
+        self.survey_size = (self.L**self.ndims)#volume of box
     
-    def p_spec(self, del_squared):
-        '''like the main method. Organizes stuff'''
-        
-        self.grid(del_squared) #sets up grid of radial distances
-        
+    def fourier(self,f):
+        fourier_transform =  fftshift(fftn(fftshift(f)))
+        scaled = fourier_transform*(self.delta_r**self.ndims)
+        return scaled
+
+    def r3_norm(self,rx,ry,rz):
+        '''calculating length of each voxel's radial distance from origin'''
+        return np.sqrt(rx**2 + ry**2 + rz**2)
     
         self.sort() #sorting radii + field vals (increasing)
         self.get_bin_ind() #indices determing which elements go into bins
@@ -98,6 +99,10 @@ class PowerSpectrum():
         sort_ind = np.argsort(self.radii.flat)
         self.r_sorted = self.radii.flat[sort_ind]
         self.vals_sorted = self.abs_squared.flat[sort_ind] 
+
+        if self.ignore_0:
+            self.r_sorted = self.r_sorted[1:]
+            self.vals_sorted = self.vals_sorted[1:]
         
     def get_bin_ind(self, r = None):
         '''given the desired bin edges, determines the index of the last pixel
@@ -140,9 +145,24 @@ class PowerSpectrum():
         self.field_bins = self.vals_binned/self.bin_dims
         self.average_k = self.r_binned/self.bin_dims
     
+    def p_spec(self, del_squared, ignore_0):
+        '''like the main method. Organizes stuff'''
+
+        self.ignore_0 = ignore_0
+        
+        self.grid(del_squared) #sets up grid of radial distances
+        
     
-    def compute_pspec(self, del_squared = True):
-        self.p_spec(del_squared)
+        self.sort() #sorting radii + field vals (increasing)
+        self.get_bin_ind() #indices determing which elements go into bins
+        self.average_bins() #computing average of bins
+        self.power = self.field_bins/self.survey_size
+        
+        if del_squared:
+            self.power *= (1/(2*np.pi**2))
+        
+    def compute_pspec(self, del_squared = True, ignore_0 = False):
+        self.p_spec(del_squared, ignore_0)
         return self.average_k, self.power
     
     def cylindrical_pspec(self, del_squared = False):
