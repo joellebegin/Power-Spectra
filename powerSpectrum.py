@@ -34,6 +34,7 @@ class PowerSpectrum():
             self.field_fourier = self.fourier(field)
         else:
             self.field_fourier = self.field
+
         self.abs_squared = np.abs(self.field_fourier)**2 
 
 
@@ -71,7 +72,7 @@ class PowerSpectrum():
         scaled = fourier_transform*(self.delta_r**self.ndims)
         return scaled
 
-    def r3_norm(self,rx,ry,rz):
+    def r3_norm(self,rx,ry,rz): #can make this obsolete with np.norm giving axis =0
         '''calculating length of each voxel's radial distance from origin'''
         return np.sqrt(rx**2 + ry**2 + rz**2)
     
@@ -83,6 +84,8 @@ class PowerSpectrum():
         
         origin = self.n//2
         self.rmax = self.n - 0.5 - origin
+
+        #dont actually need to split these up, np.indices can be assigned to one var
         if self.ndims == 2: 
             x,y = np.indices(self.field.shape)
             self.radii = np.hypot(x - origin, y - origin)*self.delta_k
