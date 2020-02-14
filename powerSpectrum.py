@@ -1,6 +1,7 @@
 
 import numpy as np
 from numpy.fft import fftn, fftshift
+from numpy.linalg import norm
 
 class PowerSpectrum():
 
@@ -111,12 +112,7 @@ class PowerSpectrum():
             if self.del_squared:
                 self.power /= 2*np.pi**2
 
-    
 
-    def r3_norm(self,rx,ry,rz): #can make this obsolete with np.norm giving axis =0
-        '''calculating length of each voxel's radial distance from origin'''
-        return np.sqrt(rx**2 + ry**2 + rz**2)
-    
     def grid(self):
         '''
         Generates a fourier space grid with spacing set by box specs, and finds 
@@ -130,14 +126,8 @@ class PowerSpectrum():
         origin = self.n//2
         self.rmax = self.n - 0.5 - origin
 
-        #dont actually need to split these up, np.indices can be assigned to one var
-        if self.ndims == 2: 
-            x,y = np.indices(self.field.shape)
-            self.radii = np.hypot(x - origin, y - origin)*self.delta_k
-            
-        elif self.ndims == 3: 
-            x,y,z = np.indices(self.field.shape)
-            self.radii = self.r3_norm(x-origin, y-origin, z-origin)*self.delta_k
+        indices = np.indices(self.field.shape) - origin
+        self.radii = norm(indices, axis = 0)
         
         if self.del_squared:
                 self.abs_squared *= self.radii**3
