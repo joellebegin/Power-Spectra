@@ -67,6 +67,7 @@ class PowerSpectrum():
         self.abs_squared = np.abs(self.field_fourier)**2 
 
     #============================== INIT METHODS ==============================#
+    
     def fourier(self):
         fourier_transform = fftshift(fftn(fftshift(self.field)))
         scaled = fourier_transform*(self.delta_r**self.ndims)
@@ -81,13 +82,11 @@ class PowerSpectrum():
             self.bins = np.linspace(self.delta_k, self.rmax, self.n_bins)
 
         else: #default bins
-            self.bins = np.logspace(np.log10(0.021), np.log10(self.rmax), num=13)
-
-
+            self.bins = np.logspace(np.log10(0.021), np.log10(3), num=13)
 
     #======================= METHODS THAT OUTPUT BOXES ========================#
 
-    def compute_pspec(self, del_squared = True, ignore_0 = False):
+    def compute_pspec(self, del_squared = True, ignore_0 = False, return_k = True):
         ''' computes the power spectrum. 
 
         Parameters
@@ -110,10 +109,21 @@ class PowerSpectrum():
         self.del_squared = del_squared
 
         self.p_spec()
-        return self.average_k, self.power
 
+        if return_k:
+            return self.average_k, self.power
+        else:
+            return self.power
 
-    #cylindrical pspec main will live here
+    def compute_cylindrical_pspec(self, ignore_0 = False, k_perp_bins = None,
+    k_par_bins = None, delta_squared = False):
+
+        self.k_perp_bins = k_perp_bins
+        self.k_par_bins = k_par_bins
+        self.delsq = delta_squared
+        self.ignore_0 = ignore_0 
+
+        self.cyl_pspec()
 
 
     #=============== METHODS RELATED TO VANILLA POWER SPECTRUM ================#
@@ -142,7 +152,7 @@ class PowerSpectrum():
             in kspace units
         '''
 
-        indices = np.indices(self.field.shape) - self.origin
+        indices = (np.indices(self.field.shape) - self.origin)*self.delta_k
         self.radii = norm(indices, axis = 0)
         
         if self.del_squared:
@@ -194,3 +204,19 @@ class PowerSpectrum():
         self.field_bins = self.vals_binned/self.bin_dims
         self.average_k = self.r_binned/self.bin_dims
     
+#=============== METHODS RELATED TO CYLINDRICAL POWER SPECTRUM ================#
+
+    def cyl_pspec(self):
+
+        self.compute_kperp_pspec()
+
+    def compute_kperp_pspec(self):
+        k_par_power = []
+        for k_perp_slice in self.field:
+            spec = PowerSpectrum(k_perp_slice, k_bins = self.k_par_bins, do_ft= False)
+            power = spec.compute_pspec(del_squared= self.delsq, 
+                                        ignore_0= self.ignore_0, return_k= False)
+            k_par_power.append(power)
+        
+        self.k_par_power = np.array(k_par_power)
+
