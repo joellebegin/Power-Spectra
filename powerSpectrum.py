@@ -5,7 +5,7 @@ from numpy.linalg import norm
 
 class PowerSpectrum():
 
-    def __init__(self, field, bins = None, L = 300, do_ft = True):
+    def __init__(self, field, k_bins = None, n_bins = None, L = 300, do_ft = True):
         '''
         Creates a power spectrum object, with methods that will output either a 
         regular 1d power spectrum or a cylindrical power spectrum. 
@@ -18,6 +18,10 @@ class PowerSpectrum():
         bins: NoneType or 1darray
             if not None, fourier space bid edges for isotropic averaging. 
             the defauult is 13 logarithmically spaced bins as specified below
+
+        n_bins: NoneType or int
+            if want uniformly spaced bins, this will generate bin edges from 
+            the minimum k to max k as specified by box specs
 
         L: int or float
             real space resolution of box in Mpc
@@ -35,36 +39,51 @@ class PowerSpectrum():
             to be implemented
         '''
         self.field = field
+        self.k_bins = k_bins 
+        self.n_bins = n_bins
         
         #----------------------------- box specs ------------------------------#
         self.L = L
         self.ndims = len(field.shape)
         self.n = field.shape[0] #number of pixels along one axis
         self.survey_size = (self.n**self.ndims)#volume of box
+        self.origin = self.n//2
 
 
         self.delta_k = 2*np.pi/self.L #kspace resolution of 1 pixel
         self.delta_r = self.L/self.n #real space resolution of 1 pixel
 
+        self.rmax = (self.n - self.origin)*self.delta_k #max radius
+
         #--------------------- Power spectrum attributes ----------------------#
 
-        if bins is not None:
-            self.bins = bins
-        else: #default bins
-            self.bins = np.logspace(np.log10(0.021), np.log10(3), num=13)
+        self.get_bins() #defining bins variable according to specifications
 
-        if do_ft:
+        if do_ft: 
             self.fourier()
         else:
             self.field_fourier = self.field
 
         self.abs_squared = np.abs(self.field_fourier)**2 
 
-
+    #============================== INIT METHODS ==============================#
     def fourier(self):
         fourier_transform = fftshift(fftn(fftshift(self.field)))
         scaled = fourier_transform*(self.delta_r**self.ndims)
         self.field_fourier = scaled
+
+    def get_bins(self):
+        
+        if self.k_bins is not None:
+            self.bins = self.k_bins
+
+        elif self.n_bins is not None:
+            self.bins = np.linspace(self.delta_k, self.rmax, self.n_bins)
+
+        else: #default bins
+            self.bins = np.logspace(np.log10(0.021), np.log10(self.rmax), num=13)
+
+
 
     #======================= METHODS THAT OUTPUT BOXES ========================#
 
@@ -122,11 +141,8 @@ class PowerSpectrum():
             grid that contains radial distance of each pixel from origin, 
             in kspace units
         '''
-        
-        origin = self.n//2
-        self.rmax = self.n - 0.5 - origin
 
-        indices = np.indices(self.field.shape) - origin
+        indices = np.indices(self.field.shape) - self.origin
         self.radii = norm(indices, axis = 0)
         
         if self.del_squared:
