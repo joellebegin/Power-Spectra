@@ -137,7 +137,12 @@ class PowerSpectrum():
             
             #indices determing which elements go into bins
             self.get_bin_ind(self.bins, self.r_sorted)
-            self.average_bins() #computing average of bins
+            
+            
+            #computing average of bins
+            self.field_bins = self.average_bins(self.bin_ind, self.vals_sorted) 
+            self.average_k = self.average_bins(self.bin_ind, self.r_sorted)
+            
             self.power = self.field_bins/self.survey_size
             
             if self.del_squared:
@@ -215,22 +220,20 @@ class PowerSpectrum():
                     bin_ind.append(val-1)
             self.bin_ind = np.array(bin_ind)
 
-    def average_bins(self):
+    def average_bins(self, bin_indices, values):
         ''' puts things in bins, averages the bins
         -average_k: average k value going into each bin
         -field_bins: field values put into bins and averaged'''
         vals_binned = []
-        r_binned = []
         bin_dims = []
         
-        for i in range(1, len(self.bin_ind)): #THIS IS SLOW AND UGLY. FIX ONE DAY
-            r_binned.append(np.sum(self.r_sorted[self.bin_ind[i-1]:self.bin_ind[i]+1]))
-            vals_binned.append(np.sum(self.vals_sorted[self.bin_ind[i-1]:self.bin_ind[i]+1]))
-            bin_dims.append(len(self.r_sorted[self.bin_ind[i-1]:self.bin_ind[i]+1]))
+        for i in range(1, len(bin_indices)): #THIS IS SLOW AND UGLY. FIX ONE DAY
+            
+            vals_binned.append(np.sum(values[bin_indices[i-1]:bin_indices[i]+1]))
+            bin_dims.append(len(values[bin_indices[i-1]:bin_indices[i]+1]))
         
         self.vals_binned = np.array(vals_binned)
-        self.r_binned = np.array(r_binned)
         self.bin_dims = np.array(bin_dims)
         
-        self.field_bins = self.vals_binned/self.bin_dims
-        self.average_k = self.r_binned/self.bin_dims
+        return self.vals_binned/self.bin_dims
+
