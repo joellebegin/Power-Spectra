@@ -211,7 +211,7 @@ class PowerSpectrum():
     def get_bin_ind(self, bins, values):
             '''given the bin edges (bins), and data to be binned (values)
             determines value of last pixel going into each bin'''
-            bin_ind = [0]
+            bin_ind = [-1]
             for bin_val in bins:
                 val = np.argmax( values > bin_val)
                 if val == 0: #ie bin_val > r_max
@@ -224,16 +224,13 @@ class PowerSpectrum():
         ''' puts things in bins, averages the bins
         -average_k: average k value going into each bin
         -field_bins: field values put into bins and averaged'''
-        vals_binned = []
-        bin_dims = []
-        
-        for i in range(1, len(bin_indices)): #THIS IS SLOW AND UGLY. FIX ONE DAY
-            
-            vals_binned.append(np.sum(values[bin_indices[i-1]:bin_indices[i]+1]))
-            bin_dims.append(len(values[bin_indices[i-1]:bin_indices[i]+1]))
-        
-        self.vals_binned = np.array(vals_binned)
-        self.bin_dims = np.array(bin_dims)
-        
-        return self.vals_binned/self.bin_dims
+      
+
+        cumulative_sum = np.cumsum(values)
+        bin_sums = cumulative_sum[bin_indices[1:]]
+        bin_sums[1:] -= bin_sums[:len(bin_sums)-1]
+
+        bin_dims = bin_indices[1:] - bin_indices[:len(bin_indices)-1]  
+
+        return bin_sums/bin_dims      
 
