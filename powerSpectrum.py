@@ -16,7 +16,7 @@ class PowerSpectrum():
             field for which to compute the power spectrum
 
         bins: NoneType or 1darray
-            if not None, fourier space bid edges for isotropic averaging. 
+            if not None, fourier space bin edges for isotropic averaging. 
             the defauult is 13 logarithmically spaced bins as specified below
 
         n_bins: NoneType or int
@@ -82,7 +82,7 @@ class PowerSpectrum():
             self.bins = np.linspace(self.delta_k, self.rmax, self.n_bins)
 
         else: #default bins
-            self.bins = np.logspace(np.log10(0.021), np.log10(3), num=13)
+            self.bins = np.logspace(np.log10(0.021), np.log10(self.rmax), num=13)
 
     #======================= METHODS THAT OUTPUT BOXES ========================#
 
@@ -134,7 +134,9 @@ class PowerSpectrum():
             self.grid() #sets up grid of radial distances
             
             self.sort() #sorting radii + field vals (increasing)
-            self.get_bin_ind() #indices determing which elements go into bins
+            
+            #indices determing which elements go into bins
+            self.get_bin_ind(self.bins, self.r_sorted)
             self.average_bins() #computing average of bins
             self.power = self.field_bins/self.survey_size
             
@@ -145,7 +147,7 @@ class PowerSpectrum():
     def grid(self):
         '''
         Generates a fourier space grid with spacing set by box specs, and finds 
-        radial distance of each pixel from origin. Useful variables created:
+        radial distance of each pixel from origin. Useful variable created:
 
         radii: numpy ndarray 
             grid that contains radial distance of each pixel from origin, 
@@ -173,16 +175,45 @@ class PowerSpectrum():
             self.r_sorted = self.r_sorted[1:]
             self.vals_sorted = self.vals_sorted[1:]
         
-    def get_bin_ind(self):
-        '''given the desired bin edges, determines the index of the last pixel
-        going into this bin'''
-        bin_ind = [0]
-        for bin_val in self.bins:
-            val = np.argmax( self.r_sorted > bin_val)
-            if val == 0: #ie bin_val > r_max
-                val = len(self.r_sorted)
-            bin_ind.append(val-1)
-        self.bin_ind = np.array(bin_ind)
+    
+#=============== METHODS RELATED TO CYLINDRICAL POWER SPECTRUM ================#
+
+    def cyl_pspec(self):
+
+        self.compute_kperp_pspec()
+        self.bin_kpar()
+
+    def compute_kperp_pspec(self):
+        k_par_power = []
+        for k_perp_slice in self.field:
+            spec = PowerSpectrum(k_perp_slice, k_bins = self.k_par_bins, do_ft= False)
+            power = spec.compute_pspec(del_squared= self.delsq, 
+                                        ignore_0= self.ignore_0, return_k= False)
+            k_par_power.append(power)
+        
+        self.k_par_power = np.array(k_par_power)
+
+    def bin_kpar(self):
+        self.k_par = np.arange(self.n//2,self.n//2)*self.delta_k
+        #have to modify get_bin_ind so that it can take the bins and the radii 
+        #as arugment, that way i can use it here
+
+        #and average bins as well
+
+
+#============================ BINNING FUNCTIONS ===============================#
+
+    def get_bin_ind(self, bins, values):
+            '''given the bin edges (bins), and data to be binned (values)
+            determines value of last pixel going into each bin'''
+            bin_ind = [0]
+            for bin_val in bins:
+                val = np.argmax( values > bin_val)
+                if val == 0: #ie bin_val > r_max
+                    val = len(values)
+                else:
+                    bin_ind.append(val-1)
+            self.bin_ind = np.array(bin_ind)
 
     def average_bins(self):
         ''' puts things in bins, averages the bins
@@ -203,20 +234,3 @@ class PowerSpectrum():
         
         self.field_bins = self.vals_binned/self.bin_dims
         self.average_k = self.r_binned/self.bin_dims
-    
-#=============== METHODS RELATED TO CYLINDRICAL POWER SPECTRUM ================#
-
-    def cyl_pspec(self):
-
-        self.compute_kperp_pspec()
-
-    def compute_kperp_pspec(self):
-        k_par_power = []
-        for k_perp_slice in self.field:
-            spec = PowerSpectrum(k_perp_slice, k_bins = self.k_par_bins, do_ft= False)
-            power = spec.compute_pspec(del_squared= self.delsq, 
-                                        ignore_0= self.ignore_0, return_k= False)
-            k_par_power.append(power)
-        
-        self.k_par_power = np.array(k_par_power)
-
