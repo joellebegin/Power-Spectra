@@ -86,7 +86,8 @@ class PowerSpectrum():
 
     #======================= METHODS THAT OUTPUT BOXES ========================#
 
-    def compute_pspec(self, del_squared = True, ignore_0 = False, return_k = True):
+    def compute_pspec(self, del_squared = True, ignore_0 = False, return_k = True,
+    normalize = True):
         ''' computes the power spectrum. 
 
         Parameters
@@ -107,6 +108,7 @@ class PowerSpectrum():
         '''
         self.ignore_0 = ignore_0
         self.del_squared = del_squared
+        self.normalize = normalize 
 
         self.p_spec()
 
@@ -118,35 +120,48 @@ class PowerSpectrum():
     def compute_cylindrical_pspec(self, ignore_0 = False, k_perp_bins = None,
     k_par_bins = None, delta_squared = False):
 
-        self.k_perp_bins = k_perp_bins
-        self.k_par_bins = k_par_bins
         self.delsq = delta_squared
         self.ignore_0 = ignore_0 
 
+        if k_par_bins is not None:
+            self.k_par_bins = k_par_bins
+        else: 
+            self.k_par_bins = np.linspace(self.delta_k, self.rmax, 13)
+
+        if k_perp_bins is not None:
+            self.k_perp_bins = k_perp_bins
+        else: 
+            self.k_perp_bins = np.linspace(self.delta_k, self.rmax, 13)
+
         self.cyl_pspec()
+
+        return self.cyl_power
 
 
     #=============== METHODS RELATED TO VANILLA POWER SPECTRUM ================#
 
     def p_spec(self):
-            '''Main method of power spectrum compuation. Organizes functions.'''
+        '''Main method of power spectrum compuation. Organizes functions.'''
 
-            self.grid() #sets up grid of radial distances
-            
-            self.sort() #sorting radii + field vals (increasing)
-            
-            #indices determing which elements go into bins
-            self.get_bin_ind(self.bins, self.r_sorted)
-            
-            
-            #computing average of bins
-            self.field_bins = self.average_bins(self.bin_ind, self.vals_sorted) 
-            self.average_k = self.average_bins(self.bin_ind, self.r_sorted)
-            
+        self.grid() #sets up grid of radial distances
+        
+        self.sort() #sorting radii + field vals (increasing)
+        
+        #indices determing which elements go into bins
+        self.bin_ind = self.get_bin_ind(self.bins, self.r_sorted)
+        
+        
+        #computing average of bins
+        self.field_bins = self.average_bins(self.bin_ind, self.vals_sorted) 
+        self.average_k = self.average_bins(self.bin_ind, self.r_sorted)
+        
+        if self.normalize:
             self.power = self.field_bins/self.survey_size
-            
-            if self.del_squared:
-                self.power /= 2*np.pi**2
+        else:
+            self.power = self.field_bins
+        
+        if self.del_squared:
+            self.power /= 2*np.pi**2
 
 
     def grid(self):
@@ -185,52 +200,80 @@ class PowerSpectrum():
 
     def cyl_pspec(self):
 
-        self.compute_kperp_pspec()
+        # print("Hello")
+        self.compute_kperp_pspecs()
+        self.sort_kpar()
         self.bin_kpar()
 
-    def compute_kperp_pspec(self):
-        k_par_power = []
-        for k_perp_slice in self.field:
-            spec = PowerSpectrum(k_perp_slice, k_bins = self.k_par_bins, do_ft= False)
-            power = spec.compute_pspec(del_squared= self.delsq, 
-                                        ignore_0= self.ignore_0, return_k= False)
-            k_par_power.append(power)
+        self.cyl_power = self.k_par_averaged/self.survey_size
         
-        self.k_par_power = np.array(k_par_power)
+
+    def compute_kperp_pspecs(self):
+        k_perp_power = []
+        for k_perp_slice in np.rollaxis(self.abs_squared,0):
+            
+            spec = PowerSpectrum(k_perp_slice, k_bins = self.k_par_bins, 
+            do_ft= False)
+            
+            power = spec.compute_pspec(del_squared= self.delsq, 
+            ignore_0= self.ignore_0, return_k= False, normalize= False)
+            
+            k_perp_power.append(power)
+        
+        self.k_perp_power = np.array(k_perp_power)
+
+    def sort_kpar(self):
+        
+        #values of k_parallel set by grid spacing
+        self.k_par = np.arange(-self.n//2,self.n//2)*self.delta_k
+        self.k_par_radii = np.abs(self.k_par)
+
+        sort_ind = np.argsort(self.k_par_radii)
+        self.k_par_sorted = self.k_par_radii[sort_ind]
+        self.k_perp_sorted = self.k_perp_power[sort_ind,:]
 
     def bin_kpar(self):
-        self.k_par = np.arange(self.n//2,self.n//2)*self.delta_k
-        #have to modify get_bin_ind so that it can take the bins and the radii 
-        #as arugment, that way i can use it here
+        
+        self.k_par_bin_ind = self.get_bin_ind(self.k_par_bins, self.k_par_sorted)
+        
+        self.k_par_averaged = self.average_bins(self.k_par_bin_ind, self.k_perp_power,
+        cylindrical= True)
 
-        #and average bins as well
 
 
 #============================ BINNING FUNCTIONS ===============================#
 
     def get_bin_ind(self, bins, values):
-            '''given the bin edges (bins), and data to be binned (values)
-            determines value of last pixel going into each bin'''
-            bin_ind = [-1]
-            for bin_val in bins:
-                val = np.argmax( values > bin_val)
-                if val == 0: #ie bin_val > r_max
-                    val = len(values)
-                else:
-                    bin_ind.append(val-1)
-            self.bin_ind = np.array(bin_ind)
+        '''given the bin edges (bins), and data to be binned (values)
+        determines value of last pixel going into each bin'''
+        bin_indices = [-1]
+        for bin_val in bins:
+            val = np.argmax( values > bin_val)
+            if val == 0: #ie bin_val > r_max
+                val = len(values)
+            
+            bin_indices.append(val-1)
+        return np.array(bin_indices)
 
-    def average_bins(self, bin_indices, values):
+    def average_bins(self, bin_indices, values, cylindrical = False):
         ''' puts things in bins, averages the bins
         -average_k: average k value going into each bin
         -field_bins: field values put into bins and averaged'''
       
+        if cylindrical:
+            cumulative_sum = np.cumsum(values, axis = 0)
+            bin_sums = cumulative_sum[bin_indices[1:],:]
+            bin_sums[1:] -= bin_sums[:len(bin_sums)-1]
 
-        cumulative_sum = np.cumsum(values)
-        bin_sums = cumulative_sum[bin_indices[1:]]
-        bin_sums[1:] -= bin_sums[:len(bin_sums)-1]
+            bin_dims = bin_indices[1:] - bin_indices[:len(bin_indices)-1]  
+       
+        else:
+            cumulative_sum = np.cumsum(values)
+            bin_sums = cumulative_sum[bin_indices[1:]]
+            bin_sums[1:] -= bin_sums[:len(bin_sums)-1]
 
-        bin_dims = bin_indices[1:] - bin_indices[:len(bin_indices)-1]  
-
+            bin_dims = bin_indices[1:] - bin_indices[:len(bin_indices)-1]
+        
+        # print(bin_dims)
         return bin_sums/bin_dims      
 
