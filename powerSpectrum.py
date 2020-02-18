@@ -155,7 +155,7 @@ class PowerSpectrum():
 
         #initializing attributes
         self.delsq = delta_squared
-        self.ignore_0 = ignore_0 
+        self.ignore_0_cyl = ignore_0 
         self.k_par_bins = k_par_bins
         self.k_perp_bins = k_perp_bins
 
@@ -269,7 +269,7 @@ class PowerSpectrum():
             do_ft= False) #power spectrum object
             
             power = spec.compute_pspec(del_squared= self.delsq, 
-            ignore_0= self.ignore_0, return_k= False, normalize= False)
+            ignore_0= self.ignore_0_cyl, return_k= False, normalize= False)
             
             k_perp_power.append(power)
         
@@ -297,6 +297,10 @@ class PowerSpectrum():
         sort_ind = np.argsort(self.k_par_radii)
         self.k_par_sorted = self.k_par_radii[sort_ind]
         self.k_perp_sorted = self.k_perp_power[sort_ind,:]
+
+        if self.ignore_0_cyl:
+            self.k_par_sorted = self.k_par_sorted[1:]
+            self.k_perp_sorted = self.k_perp_sorted[1:]
 
     def bin_kpar(self):
         ''' 
