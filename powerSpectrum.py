@@ -61,10 +61,10 @@ class PowerSpectrum():
 
         if do_ft: 
             self.fourier()
+            self.abs_squared = np.abs(self.field_fourier)**2
         else:
-            self.field_fourier = self.field
+            self.abs_squared = self.field
 
-        self.abs_squared = np.abs(self.field_fourier)**2 
 
     #============================== INIT METHODS ==============================#
     
@@ -122,16 +122,10 @@ class PowerSpectrum():
 
         self.delsq = delta_squared
         self.ignore_0 = ignore_0 
+        self.k_par_bins = k_par_bins
+        self.k_perp_bins = k_perp_bins
 
-        if k_par_bins is not None:
-            self.k_par_bins = k_par_bins
-        else: 
-            self.k_par_bins = np.linspace(self.delta_k, self.rmax, 13)
-
-        if k_perp_bins is not None:
-            self.k_perp_bins = k_perp_bins
-        else: 
-            self.k_perp_bins = np.linspace(self.delta_k, self.rmax, 13)
+        self.get_cyl_bins()
 
         self.cyl_pspec()
 
@@ -197,17 +191,27 @@ class PowerSpectrum():
         
     
 #=============== METHODS RELATED TO CYLINDRICAL POWER SPECTRUM ================#
+    
+    def get_cyl_bins(self):
+
+        if self.k_par_bins is not None:
+            self.k_par_bins = self.k_par_bins
+        else: 
+            self.k_par_bins = np.linspace(self.delta_k, self.rmax, 13)
+
+        if self.k_perp_bins is not None:
+            self.k_perp_bins = self.k_perp_bins
+        else: 
+            self.k_perp_bins = np.linspace(self.delta_k, self.rmax, 13)
 
     def cyl_pspec(self):
 
-        # print("Hello")
         self.compute_kperp_pspecs()
         self.sort_kpar()
         self.bin_kpar()
 
         self.cyl_power = self.k_par_averaged/self.survey_size
         
-
     def compute_kperp_pspecs(self):
         k_perp_power = []
         for k_perp_slice in np.rollaxis(self.abs_squared,0):
@@ -240,7 +244,6 @@ class PowerSpectrum():
         cylindrical= True)
 
 
-
 #============================ BINNING FUNCTIONS ===============================#
 
     def get_bin_ind(self, bins, values):
@@ -266,6 +269,8 @@ class PowerSpectrum():
             bin_sums[1:] -= bin_sums[:len(bin_sums)-1]
 
             bin_dims = bin_indices[1:] - bin_indices[:len(bin_indices)-1]  
+            
+            averaged_bins = bin_sums/bin_dims.reshape(len(bin_dims), 1)
        
         else:
             cumulative_sum = np.cumsum(values)
@@ -273,7 +278,7 @@ class PowerSpectrum():
             bin_sums[1:] -= bin_sums[:len(bin_sums)-1]
 
             bin_dims = bin_indices[1:] - bin_indices[:len(bin_indices)-1]
-        
+            averaged_bins = bin_sums/bin_dims
         # print(bin_dims)
-        return bin_sums/bin_dims      
+        return averaged_bins    
 
