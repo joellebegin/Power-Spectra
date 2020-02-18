@@ -15,9 +15,9 @@ class PowerSpectrum():
         field: numpy ndarray
             field for which to compute the power spectrum
 
-        bins: NoneType or 1darray
+        k_bins: NoneType or 1darray
             if not None, fourier space bin edges for isotropic averaging. 
-            the defauult is 13 logarithmically spaced bins as specified below
+            the default is 13 logarithmically spaced bins as specified below
 
         n_bins: NoneType or int
             if want uniformly spaced bins, this will generate bin edges from 
@@ -27,7 +27,8 @@ class PowerSpectrum():
             real space resolution of box in Mpc
 
         do_ft: Bool
-            set to False if box is already in fourier space
+            set to False if given box is already absolute magnitude squared of 
+            fourier transform
 
         Methods
         -------
@@ -36,8 +37,11 @@ class PowerSpectrum():
             that bin
 
         cylindrical_pspec:
-            to be implemented
+            for a 3D box, generates cylindrical power spectrum (also called 2D
+            power spectrum). 
         '''
+
+        #initializing some attributes
         self.field = field
         self.k_bins = k_bins 
         self.n_bins = n_bins
@@ -47,7 +51,7 @@ class PowerSpectrum():
         self.ndims = len(field.shape)
         self.n = field.shape[0] #number of pixels along one axis
         self.survey_size = (self.n**self.ndims)#volume of box
-        self.origin = self.n//2
+        self.origin = self.n//2 #origin by fft conventions
 
 
         self.delta_k = 2*np.pi/self.L #kspace resolution of 1 pixel
@@ -65,16 +69,18 @@ class PowerSpectrum():
         else:
             self.abs_squared = self.field
 
-
     #============================== INIT METHODS ==============================#
     
     def fourier(self):
+        '''computes the fourier transform of the field'''
+
         fourier_transform = fftshift(fftn(fftshift(self.field)))
-        scaled = fourier_transform*(self.delta_r**self.ndims)
+        scaled = fourier_transform*(self.delta_r**self.ndims) #scaling factor
         self.field_fourier = scaled
 
     def get_bins(self):
-        
+        '''gets the bin edges'''
+
         if self.k_bins is not None:
             self.bins = self.k_bins
 
@@ -88,7 +94,8 @@ class PowerSpectrum():
 
     def compute_pspec(self, del_squared = True, ignore_0 = False, return_k = True,
     normalize = True):
-        ''' computes the power spectrum. 
+        ''' 
+        computes the power spectrum. 
 
         Parameters
         ----------
@@ -120,17 +127,43 @@ class PowerSpectrum():
     def compute_cylindrical_pspec(self, ignore_0 = False, k_perp_bins = None,
     k_par_bins = None, delta_squared = False):
 
+        ''' 
+        computes cylindrical power spectrum
+        
+        Parameters
+        ----------
+        ignore_0: Bool
+            set to True if wish to ignore the 0 vector
+            
+        k_perp_bins: NoneType or ndarray
+            the bin edges in the perpendicular direction. Default is 13 uniformly
+            spaced bins. 
+            
+        k_par_bins: NoneType or ndarray
+            the bin edges in the parallel direction. Default is 13 uniformly 
+            spaced bins.
+            
+        delta_squared: Bool
+            set to True if wish to compute delta squared quantity instead
+            
+        Returns:
+        --------
+        cyl_power: 2darray
+            the cylindrical power spectrum, where the vertical axis is k parallel
+            and the horizontal axis is k perpendicular
+        '''
+
+        #initializing attributes
         self.delsq = delta_squared
         self.ignore_0 = ignore_0 
         self.k_par_bins = k_par_bins
         self.k_perp_bins = k_perp_bins
 
-        self.get_cyl_bins()
+        self.get_cyl_bins() #getting bins according to specifications
 
-        self.cyl_pspec()
+        self.cyl_pspec() #computing cylindrical power spectrum
 
         return self.cyl_power
-
 
     #=============== METHODS RELATED TO VANILLA POWER SPECTRUM ================#
 
@@ -144,7 +177,6 @@ class PowerSpectrum():
         #indices determing which elements go into bins
         self.bin_ind = self.get_bin_ind(self.bins, self.r_sorted)
         
-        
         #computing average of bins
         self.field_bins = self.average_bins(self.bin_ind, self.vals_sorted) 
         self.average_k = self.average_bins(self.bin_ind, self.r_sorted)
@@ -157,11 +189,10 @@ class PowerSpectrum():
         if self.del_squared:
             self.power /= 2*np.pi**2
 
-
     def grid(self):
         '''
         Generates a fourier space grid with spacing set by box specs, and finds 
-        radial distance of each pixel from origin. Useful variable created:
+        radial distance of each pixel from origin. Useful attribute created:
 
         radii: numpy ndarray 
             grid that contains radial distance of each pixel from origin, 
@@ -175,11 +206,18 @@ class PowerSpectrum():
                 self.abs_squared *= self.radii**3
                 
     def sort(self):
-        ''' sorts radii, and the field value corresponding to each radius in 
+        ''' 
+        Sorts radii, and the field value corresponding to each radius in 
         ascending order. sort_ind is here so as to not lose track of which 
-        radius corresponds to which field value
+        radius corresponds to which field value. Attributes created:
         
-        data is flattened in this step'''
+        r_sorted: 1darray
+            the distances of each pixel sorted in ascending order
+            
+        vals_sorted: 1darray
+            the pixel values sorted, where vals_sorted[i] is the value in the 
+            pixel corresponding to r_sorted[i].
+        '''
 
         sort_ind = np.argsort(self.radii.flat)
         self.r_sorted = self.radii.flat[sort_ind]
@@ -188,36 +226,47 @@ class PowerSpectrum():
         if self.ignore_0: #excluding zero vector
             self.r_sorted = self.r_sorted[1:]
             self.vals_sorted = self.vals_sorted[1:]
-        
-    
+           
 #=============== METHODS RELATED TO CYLINDRICAL POWER SPECTRUM ================#
     
     def get_cyl_bins(self):
+        '''Getting the bins for k perp and k parallel '''
 
         if self.k_par_bins is not None:
             self.k_par_bins = self.k_par_bins
-        else: 
+        
+        else: #default 
             self.k_par_bins = np.linspace(self.delta_k, self.rmax, 13)
 
         if self.k_perp_bins is not None:
             self.k_perp_bins = self.k_perp_bins
-        else: 
+        
+        else: #default
             self.k_perp_bins = np.linspace(self.delta_k, self.rmax, 13)
 
     def cyl_pspec(self):
+        '''Main method of the cylindrical power spectrum''' 
 
-        self.compute_kperp_pspecs()
-        self.sort_kpar()
-        self.bin_kpar()
+        self.compute_kperp_pspecs() #for every fixed k_par slice, compute pspec
+        self.sort_kpar() #sort according to k_par
+        self.bin_kpar() #bin k_perp power spectra according to k_par bins
 
         self.cyl_power = self.k_par_averaged/self.survey_size
         
     def compute_kperp_pspecs(self):
+        '''
+        abs_squared[i] is a 2D slice at fixed k parallel. For every slice, 
+        a 2D power spectrum is computed and stored. Attribute created: 
+
+        k_perp_power: ndarray
+            k_perp_power[i] contains the 2D pspec of abs_squared[i]
+        '''
+
         k_perp_power = []
         for k_perp_slice in np.rollaxis(self.abs_squared,0):
             
             spec = PowerSpectrum(k_perp_slice, k_bins = self.k_par_bins, 
-            do_ft= False)
+            do_ft= False) #power spectrum object
             
             power = spec.compute_pspec(del_squared= self.delsq, 
             ignore_0= self.ignore_0, return_k= False, normalize= False)
@@ -227,29 +276,64 @@ class PowerSpectrum():
         self.k_perp_power = np.array(k_perp_power)
 
     def sort_kpar(self):
+        '''
+        Sorting the 2D k perp pspecs according to k_par. Generates the attributes: 
+
+        k_par_radii: 1darray
+            the k parallel vectors as defined by grid spacing
+
+        k_par_sorted: 1darray
+            self explanatory. 
+
+        k_perp_sorted: 1darray
+            very cryptic name, what ever can it mean?
+        '''
         
         #values of k_parallel set by grid spacing
         self.k_par = np.arange(-self.n//2,self.n//2)*self.delta_k
         self.k_par_radii = np.abs(self.k_par)
 
+        #sorting
         sort_ind = np.argsort(self.k_par_radii)
         self.k_par_sorted = self.k_par_radii[sort_ind]
         self.k_perp_sorted = self.k_perp_power[sort_ind,:]
 
     def bin_kpar(self):
-        
+        ''' 
+        Given the bin edges for k parallel, bins the 2D power spectra accordingly.
+        '''
         self.k_par_bin_ind = self.get_bin_ind(self.k_par_bins, self.k_par_sorted)
         
         self.k_par_averaged = self.average_bins(self.k_par_bin_ind, self.k_perp_power,
         cylindrical= True)
 
-
 #============================ BINNING FUNCTIONS ===============================#
 
     def get_bin_ind(self, bins, values):
-        '''given the bin edges (bins), and data to be binned (values)
-        determines value of last pixel going into each bin'''
-        bin_indices = [-1]
+        '''
+        Given bins in kspace and array of values in k space, determines the 
+        last index of the array going into each bin.
+        
+        Parameters: 
+        -----------
+        bins: 1darray 
+            the bin edges in k space units
+            
+        values: 1darray
+            the values, in kspace units, which we wish to bin. Usually radius
+            vectors.
+        
+        Returns:
+        --------
+        bin_indices: 1darray
+            bin_indices[i] contains the index of the last element of values going
+            into the ith bin. 
+
+            i.e., the first bin will contain values[:bin_indices[1]+1], the 
+            second bin will contain values[bin_indices[1]+1:bin_indices[2]+1], 
+            and etc.
+        '''
+        bin_indices = [0]
         for bin_val in bins:
             val = np.argmax( values > bin_val)
             if val == 0: #ie bin_val > r_max
@@ -259,18 +343,40 @@ class PowerSpectrum():
         return np.array(bin_indices)
 
     def average_bins(self, bin_indices, values, cylindrical = False):
-        ''' puts things in bins, averages the bins
-        -average_k: average k value going into each bin
-        -field_bins: field values put into bins and averaged'''
-      
-        if cylindrical:
+        ''' 
+        puts things in bins, averages the bins. Does it all in one shot 
+        with cumsum which is fast, but hard to read. Nice explanation coming one 
+        day maybe when I have time?
+
+        Parameters:
+        -----------
+        bin_indices: 1darray
+            indices determining which elements go into bins, generated in 
+            get_bin_ind function above
+
+        values: ndarray
+            values to be binned
+
+        cylindrical: Bool
+            sadly can't do the same exact procedure for cylindrical pspec and 
+            regular pspec. You know when to set this variable to True. 
+        
+        Returns: 
+        --------
+        averaged_bins: ndarray
+            values binned and averaged!
+        '''
+
+        if cylindrical: #very cryptic but elegant (?) code
             cumulative_sum = np.cumsum(values, axis = 0)
             bin_sums = cumulative_sum[bin_indices[1:],:]
             bin_sums[1:] -= bin_sums[:len(bin_sums)-1]
 
             bin_dims = bin_indices[1:] - bin_indices[:len(bin_indices)-1]  
             
-            averaged_bins = bin_sums/bin_dims.reshape(len(bin_dims), 1)
+            #actually im pretty sure everything is the same but this line...
+            #fix this eventually, not crucial
+            averaged_bins = bin_sums/bin_dims.reshape(len(bin_dims), 1) 
        
         else:
             cumulative_sum = np.cumsum(values)
@@ -279,6 +385,6 @@ class PowerSpectrum():
 
             bin_dims = bin_indices[1:] - bin_indices[:len(bin_indices)-1]
             averaged_bins = bin_sums/bin_dims
-        # print(bin_dims)
+
         return averaged_bins    
 
