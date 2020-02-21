@@ -236,13 +236,13 @@ class PowerSpectrum():
             self.k_par_bins = self.k_par_bins
         
         else: #default 
-            self.k_par_bins = np.linspace(self.delta_k, self.rmax, 13)
+            self.k_par_bins = np.linspace(self.delta_k, self.rmax, 12)
 
         if self.k_perp_bins is not None:
             self.k_perp_bins = self.k_perp_bins
         
         else: #default
-            self.k_perp_bins = np.linspace(self.delta_k, self.rmax, 13)
+            self.k_perp_bins = np.linspace(self.delta_k, self.rmax, 12)
 
     def cyl_pspec(self):
         '''Main method of the cylindrical power spectrum''' 
@@ -265,7 +265,7 @@ class PowerSpectrum():
         k_perp_power = []
         for k_perp_slice in np.rollaxis(self.abs_squared,0):
             
-            spec = PowerSpectrum(k_perp_slice, k_bins = self.k_par_bins, 
+            spec = PowerSpectrum(k_perp_slice, k_bins = self.k_perp_bins, 
             do_ft= False) #power spectrum object
             
             power = spec.compute_pspec(del_squared= self.delsq, 
