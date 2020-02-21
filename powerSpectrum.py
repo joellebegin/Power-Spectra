@@ -125,7 +125,7 @@ class PowerSpectrum():
             return self.power
 
     def compute_cylindrical_pspec(self, ignore_0 = False, k_perp_bins = None,
-    k_par_bins = None, delta_squared = False):
+    k_par_bins = None, delta_squared = False, return_bins = False):
 
         ''' 
         computes cylindrical power spectrum
@@ -146,11 +146,20 @@ class PowerSpectrum():
         delta_squared: Bool
             set to True if wish to compute delta squared quantity instead
             
+        return_bins: Bool
+            set to True if want the bin edges for both k perp and k parallel
+        
         Returns:
         --------
         cyl_power: 2darray
             the cylindrical power spectrum, where the vertical axis is k parallel
             and the horizontal axis is k perpendicular
+        
+        k_par_bins: 1darray
+            bin edges for the k parallel direction
+    
+        k_perp_bins: 1darray
+            bin edges for the k perpendicular direction
         '''
 
         #initializing attributes
@@ -163,7 +172,10 @@ class PowerSpectrum():
 
         self.cyl_pspec() #computing cylindrical power spectrum
 
-        return self.cyl_power
+        if return_bins:
+            return self.k_par_bins, self.k_perp_bins, self.cyl_power
+        else:
+            return self.cyl_power
 
     #=============== METHODS RELATED TO VANILLA POWER SPECTRUM ================#
 
