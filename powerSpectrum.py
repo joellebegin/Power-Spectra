@@ -125,7 +125,7 @@ class PowerSpectrum():
             return self.power
 
     def compute_cylindrical_pspec(self, ignore_0 = False, k_perp_bins = None,
-    k_par_bins = None, delta_squared = False):
+    k_par_bins = None, delta_squared = False, return_bins = False):
 
         ''' 
         computes cylindrical power spectrum
@@ -146,16 +146,25 @@ class PowerSpectrum():
         delta_squared: Bool
             set to True if wish to compute delta squared quantity instead
             
+        return_bins: Bool
+            set to True if want the bin edges for both k perp and k parallel
+        
         Returns:
         --------
         cyl_power: 2darray
             the cylindrical power spectrum, where the vertical axis is k parallel
             and the horizontal axis is k perpendicular
+        
+        k_par_bins: 1darray
+            bin edges for the k parallel direction
+    
+        k_perp_bins: 1darray
+            bin edges for the k perpendicular direction
         '''
 
         #initializing attributes
         self.delsq = delta_squared
-        self.ignore_0 = ignore_0 
+        self.ignore_0_cyl = ignore_0 
         self.k_par_bins = k_par_bins
         self.k_perp_bins = k_perp_bins
 
@@ -163,7 +172,10 @@ class PowerSpectrum():
 
         self.cyl_pspec() #computing cylindrical power spectrum
 
-        return self.cyl_power
+        if return_bins:
+            return self.k_par_bins, self.k_perp_bins, self.cyl_power
+        else:
+            return self.cyl_power
 
     #=============== METHODS RELATED TO VANILLA POWER SPECTRUM ================#
 
@@ -236,13 +248,13 @@ class PowerSpectrum():
             self.k_par_bins = self.k_par_bins
         
         else: #default 
-            self.k_par_bins = np.linspace(self.delta_k, self.rmax, 13)
+            self.k_par_bins = np.linspace(self.delta_k, self.rmax, 12)
 
         if self.k_perp_bins is not None:
             self.k_perp_bins = self.k_perp_bins
         
         else: #default
-            self.k_perp_bins = np.linspace(self.delta_k, self.rmax, 13)
+            self.k_perp_bins = np.linspace(self.delta_k, self.rmax, 12)
 
     def cyl_pspec(self):
         '''Main method of the cylindrical power spectrum''' 
@@ -265,11 +277,11 @@ class PowerSpectrum():
         k_perp_power = []
         for k_perp_slice in np.rollaxis(self.abs_squared,0):
             
-            spec = PowerSpectrum(k_perp_slice, k_bins = self.k_par_bins, 
+            spec = PowerSpectrum(k_perp_slice, k_bins = self.k_perp_bins, 
             do_ft= False) #power spectrum object
             
             power = spec.compute_pspec(del_squared= self.delsq, 
-            ignore_0= self.ignore_0, return_k= False, normalize= False)
+            ignore_0= self.ignore_0_cyl, return_k= False, normalize= False)
             
             k_perp_power.append(power)
         
@@ -294,9 +306,13 @@ class PowerSpectrum():
         self.k_par_radii = np.abs(self.k_par)
 
         #sorting
-        sort_ind = np.argsort(self.k_par_radii)
-        self.k_par_sorted = self.k_par_radii[sort_ind]
-        self.k_perp_sorted = self.k_perp_power[sort_ind,:]
+        self.sort_ind = np.argsort(self.k_par_radii)
+        self.k_par_sorted = self.k_par_radii[self.sort_ind]
+        self.k_perp_sorted = self.k_perp_power[self.sort_ind]
+
+        if self.ignore_0_cyl:
+            self.k_par_sorted = self.k_par_sorted[1:]
+            self.k_perp_sorted = self.k_perp_sorted[1:]
 
     def bin_kpar(self):
         ''' 
@@ -304,7 +320,7 @@ class PowerSpectrum():
         '''
         self.k_par_bin_ind = self.get_bin_ind(self.k_par_bins, self.k_par_sorted)
         
-        self.k_par_averaged = self.average_bins(self.k_par_bin_ind, self.k_perp_power,
+        self.k_par_averaged = self.average_bins(self.k_par_bin_ind, self.k_perp_sorted,
         cylindrical= True)
 
 #============================ BINNING FUNCTIONS ===============================#
