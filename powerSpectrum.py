@@ -306,9 +306,9 @@ class PowerSpectrum():
         self.k_par_radii = np.abs(self.k_par)
 
         #sorting
-        sort_ind = np.argsort(self.k_par_radii)
-        self.k_par_sorted = self.k_par_radii[sort_ind]
-        self.k_perp_sorted = self.k_perp_power[sort_ind,:]
+        self.sort_ind = np.argsort(self.k_par_radii)
+        self.k_par_sorted = self.k_par_radii[self.sort_ind]
+        self.k_perp_sorted = self.k_perp_power[self.sort_ind]
 
         if self.ignore_0_cyl:
             self.k_par_sorted = self.k_par_sorted[1:]
@@ -320,7 +320,7 @@ class PowerSpectrum():
         '''
         self.k_par_bin_ind = self.get_bin_ind(self.k_par_bins, self.k_par_sorted)
         
-        self.k_par_averaged = self.average_bins(self.k_par_bin_ind, self.k_perp_power,
+        self.k_par_averaged = self.average_bins(self.k_par_bin_ind, self.k_perp_sorted,
         cylindrical= True)
 
 #============================ BINNING FUNCTIONS ===============================#
