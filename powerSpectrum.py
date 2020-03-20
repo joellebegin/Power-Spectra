@@ -50,7 +50,7 @@ class PowerSpectrum():
         self.L = L
         self.ndims = len(field.shape)
         self.n = field.shape[0] #number of pixels along one axis
-        self.survey_size = (self.n**self.ndims)#volume of box
+        self.survey_size = (self.L**self.ndims)#realspace volume of box
         self.origin = self.n//2 #origin by fft conventions
 
 
